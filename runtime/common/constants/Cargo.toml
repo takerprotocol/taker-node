@@ -1,0 +1,16 @@
+[package]
+name = "taker-common-constants"
+version = "1.0.0"
+description = "The substrate runtime constants for taker Node development"
+authors = { workspace = true }
+homepage = { workspace = true}
+edition = { workspace = true }
+license = { workspace = true }
+repository = { workspace = true }
+
+[dependencies]
+bp-core = { workspace = true }
+
+[features]
+default = ["std"]
+std = []

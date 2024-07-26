@@ -1,0 +1,28 @@
+[package]
+name = "taker-mainnet-constants"
+version = "1.0.0"
+description = "The substrate runtime constants for taker Node development"
+authors = { workspace = true }
+homepage = { workspace = true}
+edition = { workspace = true }
+license = { workspace = true }
+repository = { workspace = true }
+
+[dependencies]
+# taker
+taker-common-constants = { workspace = true }
+bp-core = { workspace = true }
+sp-consensus-babe = { workspace = true }
+# Substrate
+sp-core = { workspace = true }
+frame-support = { workspace = true }
+pallet-evm = { workspace = true }
+
+[features]
+default = ["std"]
+std = [
+	"pallet-evm/std",
+	"sp-core/std",
+	"frame-support/std",
+	"sp-consensus-babe/std",
+]

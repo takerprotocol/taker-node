@@ -1,0 +1,210 @@
+[workspace]
+resolver = "2"
+members = [
+    "node/core",
+    "node/common",
+    "node/dev",
+    "node/testnet",
+    "node/mainnet",
+    "runtime/common",
+    "runtime/dev",
+    "runtime/testnet",
+    "runtime/mainnet",
+    "primitives/core",
+    "pallets/*",
+    "pallets/precompiles/utils/macro",
+    "pallets/precompiles/utils",
+]
+[profile.release]
+panic = "unwind"
+
+[workspace.package]
+authors = ["taker"]
+homepage = ""
+edition = "2021"
+license = "Apache-2.0"
+repository = ""
+
+[workspace.dependencies]
+# General
+substrate-fixed = { git = "https://github.com/encointer/substrate-fixed", default-features = false }
+parity-scale-codec = { version = "3.2.2", default-features = false, features = [
+    "derive",
+] }
+codec = { package = "parity-scale-codec", version = "3.2.2", default-features = false, features = [
+    "derive",
+] }
+scale-info = { version = "2.0", default-features = false, features = [
+    "derive",
+] }
+evm = { git = "https://github.com/rust-blockchain/evm", rev = "b7b82c7e1fc57b7449d6dfa6826600de37cc1e65", default-features = false }
+environmental = { version = "1.1.2", default-features = false }
+clap = { version = "4.0.9", features = ["derive"] }
+hex = { version = "0.4.3", default-features = false }
+rlp = { version = "0.5", default-features = false }
+sha3 = { version = "0.10", default-features = false }
+num_enum = { version = "0.5.3", default-features = false }
+impl-serde = { version = "0.3.1", default-features = false }
+blake2-rfc = { version = "0.2.18", default-features = false }
+libsecp256k1 = { version = "0.7", default-features = false }
+serde = { version = "1.0.101", default-features = false }
+ethereum = { version = "0.14.0", default-features = false }
+jsonrpsee = { version = "0.16.2", default-features = false }
+rustc-hex = { version = "2.0.1", default-features = false }
+rand_chacha = { version = "0.2", default-features = false }
+log = { version = "0.4", default-features = false }
+impl-trait-for-tuples = "0.2.2"
+similar-asserts = "1.1.0"
+prettyplease = "0.1.18"
+hex-literal = "0.3.4"
+derive_more = "0.99"
+proc-macro2 = "1.0"
+serde_json = "1.0"
+futures = "0.3.1"
+tokio = "1.28.2"
+paste = "1.0.8"
+affix = "0.1.2"
+quote = "1.0"
+case = "1.0"
+syn = "1.0"
+
+bp-core = { default-features = false, path = "primitives/core" }
+account = { default-features = false, path = "primitives/account" }
+
+# taker Runtime
+taker-common-constants = { default-features = false, path = "runtime/common/constants" }
+taker-dev-constants = { default-features = false, path = "runtime/dev/constants" }
+taker-testnet-constants = { default-features = false, path = "runtime/testnet/constants" }
+taker-mainnet-constants = { default-features = false, path = "runtime/mainnet/constants" }
+taker-common-runtime = { default-features = false, path = "runtime/common" }
+taker-dev-runtime = { path = "runtime/dev" }
+taker-testnet-runtime = { path = "runtime/testnet" }
+taker-mainnet-runtime = { path = "runtime/mainnet" }
+
+# taker Client
+taker-common-node = { path = "node/common" }
+taker-dev-node = { path = "node/dev" }
+taker-testnet-node = { path = "node/testnet" }
+taker-mainnet-node = { path = "node/mainnet" }
+
+# Substrate Client
+sc-cli = { git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+sc-client-api = { git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+sc-rpc = { git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+sc-rpc-api = { git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+sc-transaction-pool = { git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+sc-transaction-pool-api = { git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+sc-chain-spec = { git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+sc-consensus = { git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+sc-consensus-babe = { git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+sc-consensus-grandpa = { git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+sc-consensus-grandpa-rpc = { git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+sc-consensus-manual-seal = { git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+sc-network = { git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+sc-network-sync = { git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+sc-service = { git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+sc-executor = { git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+sc-telemetry = { git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+sc-basic-authorship = { git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+sc-offchain = { git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+sc-consensus-babe-rpc = { git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+substrate-prometheus-endpoint = { git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+
+# Substrate Primitive
+sp-io = { default-features = false, git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+sp-api = { default-features = false, git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+sp-block-builder = { default-features = false, git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+sp-blockchain = { default-features = false, git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+sp-consensus = { default-features = false, git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+sp-consensus-babe = { default-features = false, git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+sp-consensus-grandpa = { default-features = false, git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+sp-core = { default-features = false, git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+sp-inherents = { default-features = false, git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+sp-offchain = { default-features = false, git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+sp-runtime = { default-features = false, git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+sp-runtime-interface = { default-features = false, git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+sp-session = { default-features = false, git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+sp-std = { default-features = false, git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+sp-transaction-pool = { default-features = false, git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+sp-version = { default-features = false, git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+sp-staking = { default-features = false, git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+sp-keystore = { default-features = false, git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+sp-timestamp = { default-features = false, git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+sp-rpc = { default-features = false, git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+sp-weights = { default-features = false, git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+sp-application-crypto = { default-features = false, git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+
+# Substrate FRAME
+substrate-frame-rpc-system = { default-features = false, git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+frame-system = { default-features = false, git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+frame-support = { default-features = false, git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+frame-executive = { default-features = false, git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+frame-system-rpc-runtime-api = { default-features = false, git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+frame-benchmarking = { default-features = false, git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+frame-benchmarking-cli = { default-features = false, git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+frame-system-benchmarking = { default-features = false, git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+frame-election-provider-support = { default-features = false, git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+pallet-babe = { default-features = false, git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+pallet-balances = { default-features = false, git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+pallet-grandpa = { default-features = false, git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+pallet-sudo = { default-features = false, git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+pallet-timestamp = { default-features = false, git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+pallet-transaction-payment = { default-features = false, git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+pallet-transaction-payment-rpc = { default-features = false, git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+pallet-transaction-payment-rpc-runtime-api = { default-features = false, git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+pallet-session = { default-features = false, git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+#pallet-staking = { default-features = false, git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+#pallet-staking-reward-curve = { default-features = false, git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+pallet-im-online = { default-features = false, git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+pallet-offences = { default-features = false, git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+pallet-authorship = { default-features = false, git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+pallet-utility = { default-features = false, git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+
+# Substrate Builds
+substrate-wasm-builder = { git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+substrate-build-script-utils = { git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+
+# Frontier Client
+fc-db = { default-features = false, git = "https://github.com/boolnetwork/frontier", branch = "taker" }
+fc-rpc = { default-features = false, git = "https://github.com/boolnetwork/frontier", branch = "taker" }
+fc-mapping-sync = { default-features = false, git = "https://github.com/boolnetwork/frontier", branch = "taker" }
+fc-rpc-core = { default-features = false, git = "https://github.com/boolnetwork/frontier", branch = "taker" }
+fc-rpc-debug = { default-features = false, git = "https://github.com/boolnetwork/frontier", branch = "taker" }
+fc-rpc-trace = { default-features = false, git = "https://github.com/boolnetwork/frontier", branch = "taker" }
+fc-rpc-txpool = { default-features = false, git = "https://github.com/boolnetwork/frontier", branch = "taker" }
+fc-consensus = { default-features = false, git = "https://github.com/boolnetwork/frontier", branch = "taker" }
+
+# Frontier Primitive
+fp-self-contained = { default-features = false, git = "https://github.com/boolnetwork/frontier", branch = "taker" }
+fp-storage = { default-features = false, git = "https://github.com/boolnetwork/frontier", branch = "taker" }
+fp-evm = { default-features = false, git = "https://github.com/boolnetwork/frontier", branch = "taker" }
+fp-ext = { default-features = false, git = "https://github.com/boolnetwork/frontier", branch = "taker" }
+fp-rpc = { default-features = false, git = "https://github.com/boolnetwork/frontier", branch = "taker" }
+fp-rpc-debug = { default-features = false, git = "https://github.com/boolnetwork/frontier", branch = "taker" }
+fp-rpc-txpool = { default-features = false, git = "https://github.com/boolnetwork/frontier", branch = "taker" }
+fp-rpc-evm-tracing-events = { default-features = false, git = "https://github.com/boolnetwork/frontier", branch = "taker" }
+fp-account = { default-features = false, git = "https://github.com/boolnetwork/frontier", branch = "taker" }
+
+# Frontier Runtime
+evm-tracer = { default-features = false, git = "https://github.com/boolnetwork/frontier", branch = "taker" }
+
+# Frontier FRAME
+pallet-evm = { default-features = false, git = "https://github.com/boolnetwork/frontier", branch = "taker" }
+pallet-evm-chain-id = { default-features = false, git = "https://github.com/boolnetwork/frontier", branch = "taker" }
+pallet-ethereum = { default-features = false, git = "https://github.com/boolnetwork/frontier", branch = "taker" }
+pallet-base-fee = { default-features = false, git = "https://github.com/boolnetwork/frontier", branch = "taker" }
+pallet-dynamic-fee = { default-features = false, git = "https://github.com/boolnetwork/frontier", branch = "taker" }
+pallet-evm-precompile-simple = { default-features = false, git = "https://github.com/boolnetwork/frontier", branch = "taker" }
+pallet-evm-precompile-bn128= { default-features = false, git = "https://github.com/boolnetwork/frontier", branch = "taker" }
+pallet-evm-precompile-modexp= { default-features = false, git = "https://github.com/boolnetwork/frontier", branch = "taker" }
+pallet-evm-precompile-blake2= { default-features = false, git = "https://github.com/boolnetwork/frontier", branch = "taker" }
+pallet-evm-precompile-sha3fips= { default-features = false, git = "https://github.com/boolnetwork/frontier", branch = "taker" }
+
+# Local
+pallet-asset-currency = { path = "pallets/asset-currency", default-features = false }
+pallet-staking = { path = "pallets/staking", default-features = false }
+pallet-staking-reward-curve = { path = "pallets/staking/reward-curve", default-features = false }
+pallet-staking-runtime-api = { path = "pallets/staking/runtime-api", default-features = false }
+
+precompile-utils = { path = "pallets/precompiles/utils", default-features = false }
+pallets-precompile = { path = "pallets/precompiles", default-features = false }

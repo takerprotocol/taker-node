@@ -1,0 +1,15 @@
+[package]
+name = "precompile-utils-macro"
+authors.workspace = true
+description = ""
+edition.workspace = true
+version = "0.1.0"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+quote = "1.0"
+proc-macro2 = "1.0"
+sha3 = { workspace = true, default-features = true }
+syn = { workspace = true, features = ["full", "fold", "extra-traits", "visit"] }

@@ -1,0 +1,88 @@
+[package]
+name = "taker-testnet-node"
+version = "1.0.0"
+description = "The node specification for taker Node testnet"
+authors = { workspace = true }
+homepage = { workspace = true}
+edition = { workspace = true }
+license = { workspace = true }
+repository = { workspace = true }
+
+[dependencies]
+# third-party dependencies
+serde_json = { workspace = true }
+jsonrpsee = { workspace = true, features = ["server"] }
+futures = { workspace = true }
+hex-literal = { workspace = true }
+tokio = { workspace = true, features = ["macros", "sync"] }
+hex = { workspace = true }
+
+# substrate client dependencies
+sc-client-api = { workspace = true }
+sc-executor = { workspace = true }
+sc-service = { workspace = true }
+sc-telemetry = { workspace = true }
+sc-transaction-pool = { workspace = true }
+sc-transaction-pool-api = { workspace = true }
+sc-consensus-babe = { workspace = true }
+sc-consensus-grandpa = { workspace = true }
+sc-consensus-grandpa-rpc = { workspace = true }
+sc-consensus = { workspace = true }
+sc-network = { workspace = true }
+sc-network-sync = { workspace = true }
+sc-rpc = { workspace = true }
+sc-rpc-api = { workspace = true }
+sc-chain-spec = { workspace = true }
+sc-basic-authorship = { workspace = true }
+sc-consensus-babe-rpc = { workspace = true }
+# substrate primitives dependencies
+sp-core = { workspace = true, features = ["std"] }
+sp-runtime = { workspace = true, features = ["std"] }
+sp-api = { workspace = true, features = ["std"] }
+sp-keystore = { workspace = true, features = ["std"] }
+sp-consensus-babe = { workspace = true, features = ["std"] }
+sp-consensus-grandpa = { workspace = true, features = ["std"] }
+sp-block-builder = { workspace = true, features = ["std"] }
+sp-timestamp = { workspace = true, features = ["std"] }
+sp-blockchain = { workspace = true }
+sp-consensus = { workspace = true }
+
+# FRAME dependencies
+pallet-transaction-payment-rpc = { workspace = true }
+substrate-frame-rpc-system = { workspace = true }
+
+# Frontier dependencies
+fc-db = { workspace = true, features = ["rocksdb"] }
+fc-rpc-core = { workspace = true }
+fc-mapping-sync = { workspace = true, features = ["sql"] }
+fc-rpc-txpool = { workspace = true }
+fc-rpc-debug = { workspace = true }
+fc-rpc-trace = { workspace = true }
+fc-rpc = { workspace = true, features = ["rpc-binary-search-estimate"] }
+fc-consensus = { workspace = true }
+
+fp-evm = { workspace = true, features = ["std"] }
+fp-storage = { workspace = true }
+fp-ext = { workspace = true, features = ["std"] }
+fp-rpc = { workspace = true, features = ["std"] }
+fp-rpc-txpool = { workspace = true, features = ["std"] }
+pallet-evm = { workspace = true, features = ["std"] }
+
+pallet-ethereum = { workspace = true, features = ["forbid-evm-reentrancy"] }
+
+# benchmarking dependencies
+frame-benchmarking-cli = { workspace = true }
+frame-benchmarking = { workspace = true, features = ["std"] }
+
+# Local Dependencies
+bp-core = { workspace = true }
+taker-testnet-runtime = { workspace = true, features = ["std", "evm-tracing"] }
+taker-testnet-constants = { workspace = true }
+taker-common-node = { workspace = true }
+pallet-staking-runtime-api = { workspace = true }
+
+[features]
+default = []
+runtime-benchmarks = [
+	"taker-testnet-runtime/runtime-benchmarks",
+]

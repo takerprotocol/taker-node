@@ -1,0 +1,165 @@
+[package]
+name = "taker-dev-runtime"
+version = "1.0.0"
+description = "The substrate runtime for taker Node development"
+authors = { workspace = true }
+homepage = { workspace = true}
+edition = { workspace = true }
+license = { workspace = true }
+repository = { workspace = true }
+build = "build.rs"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[dependencies]
+# third-party dependencies
+parity-scale-codec = { workspace = true }
+scale-info = { workspace = true }
+hex-literal = { workspace = true, optional = true }
+rlp = { workspace = true, optional = true }
+sha3 = { workspace = true, optional = true }
+num_enum = { workspace = true }
+
+# taker
+taker-common-runtime = { workspace = true }
+taker-dev-constants = { workspace = true }
+bp-core = { workspace = true }
+
+# FRAME dependencies
+frame-system = { workspace = true }
+frame-support = { workspace = true }
+frame-executive = { workspace = true }
+frame-system-rpc-runtime-api = { workspace = true }
+frame-benchmarking = { workspace = true, optional = true }
+frame-system-benchmarking = { workspace = true, optional = true }
+frame-election-provider-support = { workspace = true }
+pallet-babe = { workspace = true }
+pallet-balances = { workspace = true, features = ["insecure_zero_ed"] }
+pallet-grandpa = { workspace = true }
+pallet-sudo = { workspace = true }
+pallet-timestamp = { workspace = true }
+pallet-transaction-payment = { workspace = true }
+pallet-transaction-payment-rpc-runtime-api = { workspace = true }
+pallet-session = { workspace = true }
+pallet-staking = { workspace = true }
+pallet-staking-reward-curve = { workspace = true }
+pallet-im-online = { workspace = true }
+pallet-offences = { workspace = true }
+pallet-authorship = { workspace = true }
+pallet-asset-currency = { workspace = true }
+pallet-utility = { workspace = true }
+pallet-staking-runtime-api.workspace = true
+
+# substrate primitives
+sp-io = { workspace = true }
+sp-api = { workspace = true }
+sp-block-builder = { workspace = true }
+sp-consensus-babe = { workspace = true }
+sp-core = { workspace = true }
+sp-inherents = { workspace = true }
+sp-offchain = { workspace = true }
+sp-runtime = { workspace = true }
+sp-session = { workspace = true }
+sp-std = { workspace = true }
+sp-transaction-pool = { workspace = true }
+sp-version = { workspace = true }
+sp-staking = { workspace = true }
+# Frontier
+pallet-evm = { workspace = true }
+pallet-evm-chain-id = { workspace = true }
+pallet-dynamic-fee = { workspace = true }
+pallet-ethereum = { workspace = true }
+pallet-base-fee = { workspace = true }
+fp-self-contained = { workspace = true }
+fp-evm = { workspace = true }
+fp-rpc = { workspace = true }
+fp-rpc-debug = { workspace = true }
+fp-rpc-txpool = { workspace = true }
+fp-rpc-evm-tracing-events = { workspace = true, optional = true }
+evm-tracer = { workspace = true, optional = true }
+
+# Precompiled Contracts
+pallet-evm-precompile-simple = { workspace = true }
+pallet-evm-precompile-bn128 = { workspace = true }
+pallet-evm-precompile-modexp = { workspace = true }
+pallet-evm-precompile-blake2 = { workspace = true }
+pallet-evm-precompile-sha3fips = { workspace = true }
+pallets-precompile = { workspace = true }
+
+[build-dependencies]
+substrate-wasm-builder = { workspace = true }
+
+[features]
+default = ["std"]
+std = [
+	"parity-scale-codec/std",
+	"scale-info/std",
+	"taker-common-runtime/std",
+	"bp-core/std",
+	"frame-executive/std",
+	"frame-support/std",
+	"frame-system-rpc-runtime-api/std",
+	"frame-system/std",
+	"frame-election-provider-support/std",
+	"pallet-babe/std",
+	"pallet-balances/std",
+	"pallet-grandpa/std",
+	"pallet-sudo/std",
+	"pallet-timestamp/std",
+	"pallet-transaction-payment-rpc-runtime-api/std",
+	"pallet-transaction-payment/std",
+	"pallet-evm/std",
+	"pallet-evm-chain-id/std",
+	"pallet-dynamic-fee/std",
+	"pallet-ethereum/std",
+	"pallet-base-fee/std",
+	"pallet-session/std",
+	"pallet-staking/std",
+	"pallet-im-online/std",
+	"pallet-offences/std",
+	"pallet-authorship/std",
+	"pallet-asset-currency/std",
+	"sp-api/std",
+	"sp-consensus-babe/std",
+	"sp-block-builder/std",
+	"sp-core/std",
+	"sp-inherents/std",
+	"sp-offchain/std",
+	"sp-runtime/std",
+	"sp-session/std",
+	"sp-std/std",
+	"sp-io/std",
+	"sp-transaction-pool/std",
+	"sp-version/std",
+	"sp-staking/std",
+	"fp-self-contained/std",
+	"fp-evm/std",
+	"fp-rpc/std",
+	"fp-rpc-debug/std",
+	"fp-rpc-txpool/std",
+	"fp-rpc-evm-tracing-events/std",
+	"evm-tracer/std",
+	"pallets-precompile/std",
+	"pallet-utility/std",
+	"pallet-staking-runtime-api/std",
+]
+evm-tracing = [
+	"rlp",
+	"sha3",
+	"evm-tracer",
+	"sp-io/disable_oom",
+	"sp-io/disable_panic_handler",
+	"fp-rpc-evm-tracing-events",
+]
+runtime-wasm = []
+runtime-benchmarks = [
+	"hex-literal",
+	"sp-runtime/runtime-benchmarks",
+	"frame-benchmarking/runtime-benchmarks",
+	"frame-support/runtime-benchmarks",
+	"frame-system-benchmarking",
+	"frame-system/runtime-benchmarks",
+	"pallet-balances/runtime-benchmarks",
+	"pallet-timestamp/runtime-benchmarks",
+]
