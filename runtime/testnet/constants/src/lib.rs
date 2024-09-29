@@ -1,3 +1,4 @@
+use bp_core::AccountId;
 pub use taker_common_constants::{currency, time};
 
 pub mod fee {
@@ -21,3 +22,9 @@ pub const BABE_GENESIS_EPOCH_CONFIG: sp_consensus_babe::BabeEpochConfiguration =
 		c: (1, 4),
 		allowed_slots: sp_consensus_babe::AllowedSlots::PrimaryAndSecondaryPlainSlots,
 	};
+
+/// admin for whitelist, 0x652555f193d647382AEeEE83162E1ADf3a08F967
+pub const DEFAULT_ADMIN: AccountId = AccountId{0: [101u8, 37, 85, 241, 147, 214, 71, 56, 42, 238, 238, 131, 22, 46, 26, 223, 58, 8, 249, 103]};
+
+/// gas fee collector, 0x652555f193d647382AEeEE83162E1ADf3a08F967
+pub const FEE_COLLECTOR: AccountId = AccountId{0: [101u8, 37, 85, 241, 147, 214, 71, 56, 42, 238, 238, 131, 22, 46, 26, 223, 58, 8, 249, 103]};

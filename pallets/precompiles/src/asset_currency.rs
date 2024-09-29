@@ -1,20 +1,27 @@
-use sp_std::{fmt::Debug, marker::PhantomData};
+use sp_std::{fmt::Debug, marker::PhantomData, vec::Vec};
 use fp_evm::{PrecompileHandle, PrecompileResult, Context, PrecompileOutput, ExitSucceed, Precompile};
 use frame_support::dispatch::{GetDispatchInfo, PostDispatchInfo};
 use frame_support::sp_runtime;
 use frame_support::sp_runtime::SaturatedConversion;
 use pallet_evm::{AddressMapping, GasWeightMapping};
+use sp_core::H160;
 use precompile_utils::*;
 use sp_runtime::traits::Dispatchable;
 use precompile_utils::data::Address;
+use sp_core::Encode;
 
 #[generate_function_selector]
 #[derive(Debug, PartialEq, num_enum::TryFromPrimitive)]
 pub enum AssetCurrencyAction {
     BalanceOf = "balanceOf(address)",
     Metadata = "metadata()",
+    WhitelistAdmin = "whitelistAdmin()",
+    Whitelist = "whitelist()",
     MintTo = "mintTo(address,uint256)",
     Burn = "burn(address,uint256)",
+    TransferWhitelistAdmin = "transferWhitelistAdmin(address)",
+    UpdateWhitelist = "updateWhitelist(address,bool)",
+    Transfer = "transfer(address,uint256)",
 }
 
 pub struct AssetCurrencyPrecompile<Runtime>(PhantomData<Runtime>);
@@ -39,11 +46,16 @@ impl<Runtime> Precompile for AssetCurrencyPrecompile<Runtime>
             // Storage
             AssetCurrencyAction::BalanceOf => Self::balance_of(input_reader),
             AssetCurrencyAction::Metadata => Self::metadata(),
+            AssetCurrencyAction::WhitelistAdmin => Self::whitelist_admin(),
+            AssetCurrencyAction::Whitelist => Self::whitelist(),
             // Tx call
             AssetCurrencyAction::MintTo => Self::mint_to(input_reader, target_gas, context),
             AssetCurrencyAction::Burn => {
                 Self::burn(input_reader, target_gas, context)
-            }
+            },
+            AssetCurrencyAction::TransferWhitelistAdmin => Self::transfer_whitelist_admin(input_reader, target_gas, context),
+            AssetCurrencyAction::UpdateWhitelist => Self::update_whitelist(input_reader, target_gas, context),
+            AssetCurrencyAction::Transfer => Self::transfer(input_reader, target_gas, context),
         }
     }
 }
@@ -84,6 +96,33 @@ impl<Runtime> AssetCurrencyPrecompile<Runtime>
                 output: precompile_utils::data::EvmDataWriter::new()
                     .write::<precompile_utils::data::Bytes>(symbol.as_slice().into())
                     .write(dec)
+                    .build(),
+            }
+        )
+    }
+
+    fn whitelist_admin() -> PrecompileResult {
+        let admin =
+            pallet_asset_currency::Pallet::<Runtime>::get_admin();
+        Ok(
+            PrecompileOutput {
+                exit_status: ExitSucceed::Returned,
+                output: precompile_utils::data::EvmDataWriter::new()
+                    .write::<Address>(Address::from(H160::from_slice(&admin.encode())))
+                    .build(),
+            }
+        )
+    }
+
+    fn whitelist() -> PrecompileResult {
+        let list =
+            pallet_asset_currency::Pallet::<Runtime>::whitelist();
+        let whitelist = list.iter().map(|acc| Address::from(H160::from_slice(&acc.encode()))).collect();
+        Ok(
+            PrecompileOutput {
+                exit_status: ExitSucceed::Returned,
+                output: precompile_utils::data::EvmDataWriter::new()
+                    .write::<Vec<Address>>(whitelist)
                     .build(),
             }
         )
@@ -136,6 +175,96 @@ impl<Runtime> AssetCurrencyPrecompile<Runtime>
         let call = pallet_asset_currency::Call::<Runtime>::taker_burn {
             amount,
             from_account,
+        };
+        let dispatch_info = call.get_dispatch_info();
+        let required_gas = Runtime::GasWeightMapping::weight_to_gas(dispatch_info.weight);
+        let gasometer = Gasometer::new(Some(required_gas));
+        let _used_gas = RuntimeHelper::<Runtime>::try_dispatch(
+            Some(origin).into(),
+            call,
+            gasometer.remaining_gas()?,
+        )?;
+
+        Ok(
+            PrecompileOutput {
+                exit_status: ExitSucceed::Stopped,
+                output: Default::default(),
+            }
+        )
+    }
+
+    fn transfer_whitelist_admin(
+        mut input: EvmDataReader,
+        _target_gas: Option<u64>,
+        context: &Context,
+    ) -> PrecompileResult {
+        let origin = Runtime::AddressMapping::into_account_id(context.caller);
+        input.expect_arguments(1)?;
+        let new_admin = Runtime::AddressMapping::into_account_id(input.read::<Address>()?.0).into();
+
+        let call = pallet_asset_currency::Call::<Runtime>::transfer_whitelist_admin {
+            new_admin,
+        };
+        let dispatch_info = call.get_dispatch_info();
+        let required_gas = Runtime::GasWeightMapping::weight_to_gas(dispatch_info.weight);
+        let gasometer = Gasometer::new(Some(required_gas));
+        let _used_gas = RuntimeHelper::<Runtime>::try_dispatch(
+            Some(origin).into(),
+            call,
+            gasometer.remaining_gas()?,
+        )?;
+
+        Ok(
+            PrecompileOutput {
+                exit_status: ExitSucceed::Stopped,
+                output: Default::default(),
+            }
+        )
+    }
+
+    fn update_whitelist(
+        mut input: EvmDataReader,
+        _target_gas: Option<u64>,
+        context: &Context,
+    ) -> PrecompileResult {
+        let origin = Runtime::AddressMapping::into_account_id(context.caller);
+        input.expect_arguments(2)?;
+        let account = Runtime::AddressMapping::into_account_id(input.read::<Address>()?.0).into();
+        let add = input.read::<bool>()?;
+        let call = pallet_asset_currency::Call::<Runtime>::update_whitelist {
+            account,
+            add,
+        };
+        let dispatch_info = call.get_dispatch_info();
+        let required_gas = Runtime::GasWeightMapping::weight_to_gas(dispatch_info.weight);
+        let gasometer = Gasometer::new(Some(required_gas));
+        let _used_gas = RuntimeHelper::<Runtime>::try_dispatch(
+            Some(origin).into(),
+            call,
+            gasometer.remaining_gas()?,
+        )?;
+
+        Ok(
+            PrecompileOutput {
+                exit_status: ExitSucceed::Stopped,
+                output: Default::default(),
+            }
+        )
+    }
+
+    fn transfer(
+        mut input: EvmDataReader,
+        _target_gas: Option<u64>,
+        context: &Context,
+    ) -> PrecompileResult {
+        let origin = Runtime::AddressMapping::into_account_id(context.caller);
+        input.expect_arguments(2)?;
+        let to = Runtime::AddressMapping::into_account_id(input.read::<Address>()?.0).into();
+        let amount = input.read::<u128>()?;
+        let value: <Runtime as pallet_asset_currency::Config>::Balance = SaturatedConversion::saturated_from(amount);
+        let call = pallet_asset_currency::Call::<Runtime>::transfer {
+            to,
+            value,
         };
         let dispatch_info = call.get_dispatch_info();
         let required_gas = Runtime::GasWeightMapping::weight_to_gas(dispatch_info.weight);

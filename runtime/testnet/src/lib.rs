@@ -15,6 +15,7 @@ pub use taker_testnet_constants::{
 	fee::*,
 	time::*,
 	BABE_GENESIS_EPOCH_CONFIG,
+	FEE_COLLECTOR, DEFAULT_ADMIN,
 };
 
 use fp_rpc::TransactionStatus;
@@ -136,7 +137,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	// The version of the authorship interface.
 	authoring_version: 1,
 	// The version of the runtime spec.
-	spec_version: 111,
+	spec_version: 112,
 	// The version of the implementation of the spec.
 	impl_version: 1,
 	// A list of supported runtime APIs along with their versions.
@@ -463,6 +464,7 @@ parameter_types! {
     pub const AssetExistentialDeposit: u128 = 0;
     pub const AssetMaxLocks: u32 = 50;
     pub const AssetMaxReserves: u32 = 50;
+	pub const DefaultAdmin: AccountId = DEFAULT_ADMIN;
 }
 
 impl pallet_asset_currency::Config for Runtime {
@@ -478,17 +480,34 @@ impl pallet_asset_currency::Config for Runtime {
 	type MaxReserves = AssetMaxReserves;
 	type MaxHolds = ConstU32<1>;
 	type MaxFreezes = ();
+	type DefaultAdmin = DefaultAdmin;
+	type GasFeeCollector = FeeCollector;
 }
 
 parameter_types! {
 	pub const TransactionByteFee: Balance = TRANSACTION_BYTE_FEE;
+	pub const FeeCollector: AccountId = FEE_COLLECTOR;
+}
+
+type NegativeImbalanceOf<C, T> =
+<C as Currency<<T as frame_system::Config>::AccountId>>::NegativeImbalance;
+
+pub struct DealWithFees<T, C>(sp_std::marker::PhantomData<(T, C)>);
+impl<C, T> OnUnbalanced<NegativeImbalanceOf<C, T>> for DealWithFees<T, C>
+	where
+		T: frame_system::Config + pallet_asset_currency::Config,
+		C: Currency<<T as frame_system::Config>::AccountId>,
+{
+	fn on_nonzero_unbalanced(fees: NegativeImbalanceOf<C, T>) {
+		C::resolve_creating(&<T as pallet_asset_currency::Config>::GasFeeCollector::get(), fees);
+	}
 }
 
 /// Provides the basic logic needed to pay the absolute minimum amount needed for a transaction to
 /// be included.
 impl pallet_transaction_payment::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type OnChargeTransaction = CurrencyAdapter<Balances, ()>;
+	type OnChargeTransaction = CurrencyAdapter<Balances, DealWithFees<Runtime, Balances>>;
 	type WeightToFee = ConstantMultiplier<Balance, TransactionByteFee>;
 	type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
 	type FeeMultiplierUpdate = ();
@@ -581,7 +600,7 @@ impl pallet_evm::Config for Runtime {
 	type FeeCalculator = FixedGasPrice;
 	type GasWeightMapping = pallet_evm::FixedGasWeightMapping<Self>;
 	type WeightPerGas = WeightPerGas;
-	type OnChargeTransaction = EVMCurrencyAdapter<Balances, ()>;
+	type OnChargeTransaction = EVMCurrencyAdapter<Balances, DealWithFees<Runtime, Balances>>;
 	type FindAuthor = EthereumFindAuthor<Babe>;
 	type PrecompilesType = TakerPrecompiles<Self>;
 	type PrecompilesValue = PrecompilesValue;

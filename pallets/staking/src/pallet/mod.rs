@@ -1485,7 +1485,7 @@ pub mod pallet {
 		))]
 		pub fn payout_stakers(
 			origin: OriginFor<T>,
-			validator_stash: T::AccountId,
+			_validator_stash: T::AccountId,
 			era: EraIndex,
 		) -> DispatchResultWithPostInfo {
 			let sender = ensure_signed(origin)?;

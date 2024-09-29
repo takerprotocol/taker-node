@@ -12,6 +12,11 @@ pragma solidity >=0.8.0;
 interface AssetCurrency {
     function balanceOf(address account) external view returns (uint256);
     function metadata() external view returns (string memory,uint256);
+    function whitelistAdmin() external view returns (address);
+    function whitelist() external view returns (address [] memory);
     function mintTo(address to, uint256 amount) external;
     function burn(address from, uint256 amount) external;
+    function transferWhitelistAdmin(address admin) external;
+    function updateWhitelist(address account, bool add) external;
+    function transfer(address to, uint256 amount) external;
 }

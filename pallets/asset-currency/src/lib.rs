@@ -19,6 +19,7 @@ pub mod pallet {
     use frame_support::traits::{fungible, BalanceStatus as Status, ReservableCurrency, OnUnbalanced, Defensive, Currency};
     use frame_support::traits::fungible::{Credit, Mutate};
     use frame_support::traits::tokens::{Fortitude, Precision};
+    use frame_support::traits::tokens::Preservation::Expendable;
     use frame_system::pallet_prelude::*;
     use sp_runtime::{ArithmeticError, SaturatedConversion};
     use crate::types::*;
@@ -81,6 +82,10 @@ pub mod pallet {
         /// The maximum number of individual freeze locks that can exist on an account at any time.
         #[pallet::constant]
         type MaxFreezes: Get<u32>;
+        #[pallet::constant]
+        type DefaultAdmin: Get<Self::AccountId>;
+        #[pallet::constant]
+        type GasFeeCollector: Get<Self::AccountId>;
     }
 
     #[pallet::pallet]
@@ -156,6 +161,16 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn token_metadata)]
     pub type TokenMetadata<T: Config> = StorageValue<_, (Vec<u8>, u8), ValueQuery>;
+
+    /// The whitelist for 'Transfer'
+    #[pallet::storage]
+    #[pallet::getter(fn whitelist)]
+    pub type Whitelist<T: Config> = StorageValue<_, Vec<T::AccountId>, ValueQuery>;
+
+    /// The controller for 'TransferWhitelist'
+    #[pallet::storage]
+    #[pallet::getter(fn whitelist_admin)]
+    pub type WhitelistAdmin<T: Config> = StorageValue<_, T::AccountId, OptionQuery>;
 
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
@@ -280,6 +295,9 @@ pub mod pallet {
         SwapEmpty,
         BurnEmpty,
         NotController,
+        NotAdmin,
+        AlreadyWhitelist,
+        NotWhitelisted,
     }
 
     #[pallet::hooks]
@@ -352,6 +370,49 @@ pub mod pallet {
             Ok(().into())
         }
 
+        #[pallet::weight(0)]
+        pub fn transfer_whitelist_admin(
+            origin: OriginFor<T>,
+            new_admin: T::AccountId,
+        ) -> DispatchResultWithPostInfo {
+            Self::verify_admin(origin)?;
+            WhitelistAdmin::<T>::put(new_admin);
+            Ok(().into())
+        }
+
+        #[pallet::weight(0)]
+        pub fn update_whitelist(
+            origin: OriginFor<T>,
+            account: T::AccountId,
+            add: bool,
+        ) -> DispatchResultWithPostInfo {
+            Self::verify_admin(origin)?;
+            let mut whitelist = Whitelist::<T>::get();
+            if add {
+                ensure!(!whitelist.contains(&account), Error::<T>::AlreadyWhitelist);
+                whitelist.push(account);
+            } else {
+                if let Some(index) = whitelist.iter().position(|x| x == &account) {
+                    whitelist.remove(index);
+                } else {
+                    return Err(Error::<T>::NotWhitelisted.into());
+                }
+            }
+            Whitelist::<T>::put(whitelist);
+            Ok(().into())
+        }
+
+        #[pallet::weight(0)]
+        pub fn transfer(
+            origin: OriginFor<T>,
+            to: T::AccountId,
+            value: T::Balance,
+        ) -> DispatchResultWithPostInfo {
+            let sender = ensure_signed(origin)?;
+            ensure!(Whitelist::<T>::get().contains(&sender), Error::<T>::NotWhitelisted);
+            <Self as Mutate<_>>::transfer(&sender, &to, value, Expendable)?;
+            Ok(().into())
+        }
     }
     impl<T: Config> Pallet<T> {
         fn ed() -> T::Balance {
@@ -680,6 +741,20 @@ pub mod pallet {
                 Self::deposit_event(Event::Frozen { who: who.clone(), amount });
             }
             Ok(())
+        }
+
+        /// Verify whitelist admin
+        fn verify_admin(
+            origin: OriginFor<T>,
+        ) -> DispatchResult {
+            let sender = ensure_signed(origin)?;
+            let old_admin = WhitelistAdmin::<T>::get().unwrap_or(T::DefaultAdmin::get());
+            ensure!(sender == old_admin, Error::<T>::NotAdmin);
+            Ok(().into())
+        }
+
+        pub fn get_admin() -> T::AccountId {
+            WhitelistAdmin::<T>::get().unwrap_or(T::DefaultAdmin::get())
         }
     }
 
