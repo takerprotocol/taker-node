@@ -13,17 +13,17 @@ pub mod pallet {
     use sp_std::fmt::Debug;
     use parity_scale_codec::Codec;
     use sp_std::vec::Vec;
-    use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, BoundedSlice, transactional, WeakBoundedVec};
+    use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, BoundedSlice, transactional, WeakBoundedVec, PalletId};
     use frame_support::sp_runtime::{FixedPointOperand, Saturating};
     use frame_support::sp_runtime::traits::{AtLeast32BitUnsigned, CheckedAdd, Zero};
     use frame_support::traits::{fungible, BalanceStatus as Status, ReservableCurrency, OnUnbalanced, Defensive, Currency};
-    use frame_support::traits::fungible::{Credit, Mutate};
+    use frame_support::traits::fungible::{Credit, Inspect, Mutate};
     use frame_support::traits::tokens::{Fortitude, Precision};
     use frame_support::traits::tokens::Preservation::Expendable;
     use frame_system::pallet_prelude::*;
     use sp_runtime::{ArithmeticError, SaturatedConversion};
+    use sp_runtime::traits::AccountIdConversion;
     use crate::types::*;
-    use crate::impl_currency::PositiveImbalance;
 
     pub type CreditOf<T> = Credit<<T as frame_system::Config>::AccountId, Pallet<T>>;
     const LOG_TARGET: &str = "runtime::asset-currency";
@@ -86,6 +86,9 @@ pub mod pallet {
         type DefaultAdmin: Get<Self::AccountId>;
         #[pallet::constant]
         type GasFeeCollector: Get<Self::AccountId>;
+        /// The pallet id used for deriving its sovereign account ID.
+        #[pallet::constant]
+        type PalletId: Get<PalletId>;
     }
 
     #[pallet::pallet]
@@ -298,6 +301,7 @@ pub mod pallet {
         NotAdmin,
         AlreadyWhitelist,
         NotWhitelisted,
+        BurnOverflow,
     }
 
     #[pallet::hooks]
@@ -314,9 +318,8 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
             ensure!(TokenControllers::<T>::get().contains(&sender), Error::<T>::NotController);
-            // <Self as fungible::Mutate<_>>::mint_into(&to_account, amount)?;
-            let imbalance = Self::deposit_creating(&to_account, amount);
-            ensure!(imbalance == PositiveImbalance::<T>::new(amount), Error::<T>::MintInvalidImbalance);
+            Account::<T>::mutate(&Self::account_id(), |account| account.free = account.free.saturating_sub(amount));
+            Account::<T>::mutate(&to_account, |account| account.free = account.free.saturating_add(amount));
             Ok(().into())
         }
 
@@ -332,8 +335,12 @@ pub mod pallet {
             if amount.is_zero() {
                 return Err(Error::<T>::BurnEmpty.into())
             }
-            // burn taker token
-            Self::burn_from(&from_account, amount, Precision::Exact, Fortitude::Polite)?;
+            let balance_can_burn = Self::reducible_balance(&from_account, Expendable, Fortitude::Polite);
+            if balance_can_burn < amount {
+                return Err(Error::<T>::BurnOverflow.into())
+            }
+            Account::<T>::mutate(&Self::account_id(), |account| account.free = account.free.saturating_add(amount));
+            Account::<T>::mutate(&from_account, |account| account.free = account.free.saturating_sub(amount));
             Ok(().into())
         }
 
@@ -415,6 +422,10 @@ pub mod pallet {
         }
     }
     impl<T: Config> Pallet<T> {
+        /// Get account id for this pallet.
+        pub fn account_id() -> T::AccountId {
+            T::PalletId::get().into_account_truncating()
+        }
         fn ed() -> T::Balance {
             T::ExistentialDeposit::get()
         }

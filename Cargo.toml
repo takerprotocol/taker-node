@@ -163,6 +163,7 @@ pallet-utility = { default-features = false, git = "https://github.com/boolnetwo
 # Substrate Builds
 substrate-wasm-builder = { git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
 substrate-build-script-utils = { git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
+substrate-test-utils = { git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker" }
 
 # Frontier Client
 fc-db = { default-features = false, git = "https://github.com/boolnetwork/frontier", branch = "taker" }

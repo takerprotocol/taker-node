@@ -137,7 +137,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	// The version of the authorship interface.
 	authoring_version: 1,
 	// The version of the runtime spec.
-	spec_version: 112,
+	spec_version: 113,
 	// The version of the implementation of the spec.
 	impl_version: 1,
 	// A list of supported runtime APIs along with their versions.
@@ -392,7 +392,7 @@ impl onchain::Config for OnChainSeqPhragmen {
 impl pallet_staking::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type UnixTime = Timestamp;
-	// type Currency = Balances;
+	type GasCurrency = Balances;
 	type Currency = AssetCurrency;
 	type CurrencyToVote = U128CurrencyToVote;
 	type RewardRemainder = (); // Treasury
@@ -465,6 +465,7 @@ parameter_types! {
     pub const AssetMaxLocks: u32 = 50;
     pub const AssetMaxReserves: u32 = 50;
 	pub const DefaultAdmin: AccountId = DEFAULT_ADMIN;
+	pub const AssetPalletId: PalletId = PalletId(*b"asset/id");
 }
 
 impl pallet_asset_currency::Config for Runtime {
@@ -482,6 +483,7 @@ impl pallet_asset_currency::Config for Runtime {
 	type MaxFreezes = ();
 	type DefaultAdmin = DefaultAdmin;
 	type GasFeeCollector = FeeCollector;
+	type PalletId = AssetPalletId;
 }
 
 parameter_types! {

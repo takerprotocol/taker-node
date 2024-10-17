@@ -90,6 +90,12 @@ pub mod pallet {
 			Moment = BlockNumberFor<Self>,
 			Balance = Self::CurrencyBalance,
 		>;
+		/// The Gas balance.
+		type GasCurrency: LockableCurrency<
+			Self::AccountId,
+			Moment = BlockNumberFor<Self>,
+			Balance = Self::CurrencyBalance,
+		>;
 		/// Just the `Currency::Balance` type; we have this item to allow us to constrain it to
 		/// `From<u64>`.
 		type CurrencyBalance: sp_runtime::traits::AtLeast32BitUnsigned

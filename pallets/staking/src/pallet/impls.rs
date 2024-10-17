@@ -365,7 +365,7 @@ impl<T: Config> Pallet<T> {
 
 			let era_duration = (now_as_millis_u64 - active_era_start).saturated_into::<u64>();
 			let staked = Self::eras_total_stake(&active_era.index);
-			let issuance = T::Currency::total_issuance();
+			let issuance = T::Currency::total_issuance() + T::GasCurrency::total_issuance();
 			let (validator_payout, remainder) =
 				T::EraPayout::era_payout(staked, issuance, era_duration);
 
