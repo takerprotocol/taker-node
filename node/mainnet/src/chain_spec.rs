@@ -80,7 +80,7 @@ pub fn mainnet_config() -> ChainSpec {
 		"Taker Mainnet",
 		// ID
 		"Mainnet",
-		ChainType::Local,
+		ChainType::Live,
 		move || {
 			mainnet_genesis(
 				wasm_binary,
@@ -117,7 +117,7 @@ pub fn mainnet_config() -> ChainSpec {
 						"0x347e3ba27df3ccf65d3ec16c540c87b6b558212a76295eab28f377c4f6350757",
 					)
 				],
-				2749,
+				1125,
 			)
 		},
 		// Bootnodes
@@ -125,7 +125,7 @@ pub fn mainnet_config() -> ChainSpec {
 		// Telemetry
 		None,
 		// Protocol ID
-		Some("taker Mainnet"),
+		Some("takerMainnet"),
 		// Fork ID
 		None,
 		// Properties

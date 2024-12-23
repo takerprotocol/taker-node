@@ -302,6 +302,7 @@ pub mod pallet {
         AlreadyWhitelist,
         NotWhitelisted,
         BurnOverflow,
+		MintEmpty,
     }
 
     #[pallet::hooks]
@@ -317,7 +318,14 @@ pub mod pallet {
             to_account: T::AccountId,
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
-            ensure!(TokenControllers::<T>::get().contains(&sender), Error::<T>::NotController);
+			ensure!(TokenControllers::<T>::get().contains(&sender), Error::<T>::NotController);
+			if amount.is_zero() {
+                return Err(Error::<T>::MintEmpty.into())
+            }
+			let balance_can_burn = Self::reducible_balance(&Self::account_id(), Expendable, Fortitude::Polite);
+            if balance_can_burn < amount {
+                return Err(Error::<T>::BurnOverflow.into())
+            }
             Account::<T>::mutate(&Self::account_id(), |account| account.free = account.free.saturating_sub(amount));
             Account::<T>::mutate(&to_account, |account| account.free = account.free.saturating_add(amount));
             Ok(().into())
