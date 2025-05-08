@@ -137,7 +137,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	// The version of the authorship interface.
 	authoring_version: 1,
 	// The version of the runtime spec.
-	spec_version: 101,
+	spec_version: 102,
 	// The version of the implementation of the spec.
 	impl_version: 1,
 	// A list of supported runtime APIs along with their versions.
@@ -454,7 +454,7 @@ impl pallet_balances::Config for Runtime {
 
 
 parameter_types! {
-    pub const AssetExistentialDeposit: u128 = 1;
+    pub const AssetExistentialDeposit: u128 = 0;
     pub const AssetMaxLocks: u32 = 50;
     pub const AssetMaxReserves: u32 = 50;
 	pub const DefaultAdmin: AccountId = DEFAULT_ADMIN;
