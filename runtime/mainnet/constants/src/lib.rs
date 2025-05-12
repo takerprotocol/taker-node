@@ -20,8 +20,8 @@ pub const BABE_GENESIS_EPOCH_CONFIG: sp_consensus_babe::BabeEpochConfiguration =
 		allowed_slots: sp_consensus_babe::AllowedSlots::PrimaryAndSecondaryPlainSlots,
 	};
 
-/// admin for whitelist, 0x86877CA251E15Add75d140a3f8C5707D4e47D88a
-pub const DEFAULT_ADMIN: AccountId = AccountId{0: [134u8, 135, 124, 162, 81, 225, 90, 221, 117, 209, 64, 163, 248, 197, 112, 125, 78, 71, 216, 138]};
+/// admin for whitelist, 0xe17AcfCcDdEBaCAa5Fbc267FB3FEAE753DE5Aa39
+pub const DEFAULT_ADMIN: AccountId = AccountId{0: [225u8, 122, 207, 204, 221, 235, 172, 170, 95, 188, 38, 127, 179, 254, 174, 117, 61, 229, 170, 57]};
 
-/// gas fee collector, 0x86877CA251E15Add75d140a3f8C5707D4e47D88a
-pub const FEE_COLLECTOR: AccountId = AccountId{0: [134u8, 135, 124, 162, 81, 225, 90, 221, 117, 209, 64, 163, 248, 197, 112, 125, 78, 71, 216, 138]};
+/// gas fee collector, 0xe17AcfCcDdEBaCAa5Fbc267FB3FEAE753DE5Aa39
+pub const FEE_COLLECTOR: AccountId = AccountId{0: [225u8, 122, 207, 204, 221, 235, 172, 170, 95, 188, 38, 127, 179, 254, 174, 117, 61, 229, 170, 57]};
