@@ -5,13 +5,16 @@ use pallet_evm::{
 use sp_core::H160;
 use sp_std::marker::PhantomData;
 
+use pallet_evm_precompile_blake2::Blake2F;
+use pallet_evm_precompile_bn128::{Bn128Add, Bn128Mul, Bn128Pairing};
 use pallet_evm_precompile_modexp::Modexp;
 use pallet_evm_precompile_sha3fips::Sha3FIPS256;
 use pallet_evm_precompile_simple::{ECRecover, ECRecoverPublicKey, Identity, Ripemd160, Sha256};
-use pallet_evm_precompile_blake2::Blake2F;
-use pallet_evm_precompile_bn128::{Bn128Add, Bn128Mul, Bn128Pairing};
+use pallets_precompile::{
+	asset_currency::AssetCurrencyPrecompile, native_currency::NativeCurrencyPrecompile,
+	staking::StakingPrecompile,
+};
 use sp_runtime::traits::Dispatchable;
-use pallets_precompile::{asset_currency::AssetCurrencyPrecompile, staking::StakingPrecompile, native_currency::NativeCurrencyPrecompile};
 
 pub struct TakerPrecompiles<R>(PhantomData<R>);
 
@@ -42,14 +45,16 @@ where
 	}
 }
 impl<R> PrecompileSet for TakerPrecompiles<R>
-	where
-		R: pallet_asset_currency::Config + pallet_evm::Config,
-		<R as frame_system::Config>::RuntimeCall: Dispatchable<PostInfo = PostDispatchInfo> + GetDispatchInfo,
-		<<R as frame_system::Config>::RuntimeCall as Dispatchable>::RuntimeOrigin: From<Option<R::AccountId>>,
-		<R as frame_system::Config>::RuntimeCall: From<pallet_asset_currency::Call<R>>,
-		AssetCurrencyPrecompile<R>: Precompile,
-		NativeCurrencyPrecompile<R>: Precompile,
-		StakingPrecompile<R>: Precompile,
+where
+	R: pallet_asset_currency::Config + pallet_evm::Config,
+	<R as frame_system::Config>::RuntimeCall:
+		Dispatchable<PostInfo = PostDispatchInfo> + GetDispatchInfo,
+	<<R as frame_system::Config>::RuntimeCall as Dispatchable>::RuntimeOrigin:
+		From<Option<R::AccountId>>,
+	<R as frame_system::Config>::RuntimeCall: From<pallet_asset_currency::Call<R>>,
+	AssetCurrencyPrecompile<R>: Precompile,
+	NativeCurrencyPrecompile<R>: Precompile,
+	StakingPrecompile<R>: Precompile,
 {
 	fn execute(&self, handle: &mut impl PrecompileHandle) -> Option<PrecompileResult> {
 		match handle.code_address() {

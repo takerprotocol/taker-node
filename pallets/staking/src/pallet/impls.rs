@@ -17,33 +17,42 @@
 
 //! Implementations for the Staking FRAME Pallet.
 
-use sp_std::collections::btree_map::BTreeMap;
-use frame_election_provider_support::{data_provider, BoundedSupportsOf, ElectionDataProvider, ElectionProvider, ScoreProvider, SortedListProvider, VoteWeight, VoterOf};
+use frame_election_provider_support::{
+	bounds::{CountBound, SizeBound},
+	data_provider, BoundedSupportsOf, DataProviderBounds, ElectionDataProvider, ElectionProvider,
+	ScoreProvider, SortedListProvider, VoteWeight, VoterOf,
+};
 use frame_support::{
 	defensive,
 	dispatch::WithPostDispatchInfo,
 	pallet_prelude::*,
 	traits::{
-		Currency, Defensive, DefensiveResult, EstimateNextNewSession, Get, CurrencyToVote,
-		Imbalance, LockableCurrency, OnUnbalanced, TryCollect, WithdrawReasons, UnixTime,
+		Currency, Defensive, DefensiveResult, EstimateNextNewSession, Get, Imbalance,
+		LockableCurrency, OnUnbalanced, TryCollect, UnixTime, WithdrawReasons,
 	},
 	weights::Weight,
 };
 use frame_system::{pallet_prelude::BlockNumberFor, RawOrigin};
 use pallet_session::historical;
-use sp_runtime::{traits::{Bounded, Convert, One, SaturatedConversion, Saturating, StaticLookup, Zero}, Perbill, PerThing};
+use sp_runtime::{
+	traits::{Bounded, Convert, One, SaturatedConversion, Saturating, StaticLookup, Zero},
+	PerThing, Perbill,
+};
 use sp_staking::{
-	offence::{DisableStrategy, OffenceDetails, OnOffenceHandler},
+	currency_to_vote::CurrencyToVote,
+	offence::{OffenceDetails, OnOffenceHandler},
 	EraIndex, SessionIndex, Stake, StakingInterface,
 };
+use sp_std::collections::btree_map::BTreeMap;
 use sp_std::prelude::*;
 
-use crate::{
-	log, slashing, weights::WeightInfo, ActiveEraInfo, BalanceOf, Exposure, ExposureOf,
-	Forcing, IndividualExposure, MaxWinnersOf, Nominations, PositiveImbalanceOf, RewardDestination,
-	SessionInterface, StakingLedger, ValidatorPrefs, EraPayout,
-};
 use super::{pallet::*, STAKING_ID};
+use crate::{
+	election_size_tracker::StaticTracker, log, slashing, weights::WeightInfo, ActiveEraInfo,
+	BalanceOf, EraPayout, Exposure, ExposureOf, Forcing, IndividualExposure, MaxWinnersOf,
+	Nominations, PositiveImbalanceOf, RewardDestination, SessionInterface, StakingLedger,
+	ValidatorPrefs,
+};
 
 /// The maximum number of iterations that we do whilst iterating over `T::VoterList` in
 /// `get_npos_voters`.
@@ -143,7 +152,9 @@ impl<T: Config> Pallet<T> {
 		);
 
 		let mut rewards_info = RewardsInfoForAccount::<T>::get(&stash);
-		if let Some((index, payout_info)) = rewards_info.2.iter().enumerate().find(|v| v.1.0 == era) {
+		if let Some((index, payout_info)) =
+			rewards_info.2.iter().enumerate().find(|v| v.1 .0 == era)
+		{
 			Self::deposit_event(Event::<T>::PayoutStarted {
 				era_index: era,
 				validator_stash: stash.clone(),
@@ -151,13 +162,8 @@ impl<T: Config> Pallet<T> {
 			let payout_amount = payout_info.1;
 			let mut total_imbalance = PositiveImbalanceOf::<T>::zero();
 			// We can now make total validator payout:
-			if let Some(imbalance) =
-			Self::make_payout(&stash, payout_amount)
-			{
-				Self::deposit_event(Event::<T>::Reward(
-					stash.clone(),
-					imbalance.peek(),
-				));
+			if let Some(imbalance) = Self::make_payout(&stash, payout_amount) {
+				Self::deposit_event(Event::<T>::Reward(stash.clone(), imbalance.peek()));
 				total_imbalance.subsume(imbalance);
 			}
 			rewards_info.1 += payout_amount;
@@ -223,8 +229,9 @@ impl<T: Config> Pallet<T> {
 					Self::update_ledger(&controller, &l);
 					r
 				}),
-			RewardDestination::Account(dest_account) =>
-				Some(T::Currency::deposit_creating(&dest_account, amount)),
+			RewardDestination::Account(dest_account) => {
+				Some(T::Currency::deposit_creating(&dest_account, amount))
+			},
 			RewardDestination::None => None,
 		}
 	}
@@ -254,14 +261,14 @@ impl<T: Config> Pallet<T> {
 				_ => {
 					// Either `Forcing::ForceNone`,
 					// or `Forcing::NotForcing if era_length >= T::SessionsPerEra::get()`.
-					return None
+					return None;
 				},
 			}
 
 			// New era.
 			let maybe_new_era_validators = Self::try_trigger_new_era(session_index, is_genesis);
-			if maybe_new_era_validators.is_some() &&
-				matches!(ForceEra::<T>::get(), Forcing::ForceNew)
+			if maybe_new_era_validators.is_some()
+				&& matches!(ForceEra::<T>::get(), Forcing::ForceNew)
 			{
 				Self::set_force_era(Forcing::NotForcing);
 			}
@@ -321,7 +328,10 @@ impl<T: Config> Pallet<T> {
 	/// * update `BondedEras` and apply slashes.
 	fn start_era(start_session: SessionIndex) {
 		let active_era = ActiveEra::<T>::mutate(|active_era| {
-			let new_index = active_era.as_ref().map(|info| info.index + 1).unwrap_or(CurrentEra::<T>::get().unwrap_or(0));
+			let new_index = active_era
+				.as_ref()
+				.map(|info| info.index + 1)
+				.unwrap_or(CurrentEra::<T>::get().unwrap_or(0));
 			*active_era = Some(ActiveEraInfo {
 				index: new_index,
 				// Set new active era start in next `on_finalize`. To guarantee usage of `Time`
@@ -369,7 +379,11 @@ impl<T: Config> Pallet<T> {
 			let (validator_payout, remainder) =
 				T::EraPayout::era_payout(staked, issuance, era_duration);
 
-			Self::deposit_event(Event::<T>::EraPayout(active_era.index, validator_payout, remainder));
+			Self::deposit_event(Event::<T>::EraPayout(
+				active_era.index,
+				validator_payout,
+				remainder,
+			));
 
 			// Set ending era reward.
 			<ErasValidatorReward<T>>::insert(&active_era.index, validator_payout);
@@ -386,10 +400,8 @@ impl<T: Config> Pallet<T> {
 				let exposure = <ErasStakersClipped<T>>::get(&active_era.index, validator);
 				// This is the fraction of the total reward that the validator and the
 				// nominators will get.
-				let validator_total_reward_part: Perbill = PerThing::from_rational(
-					*validator_reward_points,
-					total_reward_points,
-				);
+				let validator_total_reward_part: Perbill =
+					PerThing::from_rational(*validator_reward_points, total_reward_points);
 				// This is how much validator + nominators are entitled to.
 				let validator_total_payout = validator_total_reward_part * validator_payout;
 
@@ -398,38 +410,37 @@ impl<T: Config> Pallet<T> {
 				let validator_commission = validator_prefs.commission;
 				let validator_commission_payout = validator_commission * validator_total_payout;
 
-				let validator_leftover_payout = validator_total_payout - validator_commission_payout;
+				let validator_leftover_payout =
+					validator_total_payout - validator_commission_payout;
 				// Now let's calculate how this is split to the validator.
-				let validator_exposure_part: Perbill = PerThing::from_rational(
-					exposure.own,
-					exposure.total,
-				);
+				let validator_exposure_part: Perbill =
+					PerThing::from_rational(exposure.own, exposure.total);
 				let validator_staking_payout = validator_exposure_part * validator_leftover_payout;
 				// change validator's rewards info
 				if validator_staking_payout + validator_commission_payout > Zero::zero() {
 					let mut rewards_info = <RewardsInfoForAccount<T>>::get(&validator);
-					rewards_info.2.push((active_era.index, validator_staking_payout + validator_commission_payout));
+					rewards_info.2.push((
+						active_era.index,
+						validator_staking_payout + validator_commission_payout,
+					));
 					<RewardsInfoForAccount<T>>::insert(&validator, rewards_info);
 					// emit validator 'EraRewardInfoEx' event
-					Self::deposit_event(
-						Event::<T>::EraRewardInfoEx(
-							active_era.index,
-							validator.clone(),
-							validator.clone(),
-							validator_commission_payout,
-							validator_staking_payout,
-						)
-					);
+					Self::deposit_event(Event::<T>::EraRewardInfoEx(
+						active_era.index,
+						validator.clone(),
+						validator.clone(),
+						validator_commission_payout,
+						validator_staking_payout,
+					));
 				}
 				// Lets now calculate how this is split to the nominators.
 				// Reward only the clipped exposures. Note this is not necessarily sorted.
 				for nominator in exposure.others.iter() {
-					let nominator_exposure_part: Perbill = PerThing::from_rational(
-						nominator.value,
-						exposure.total,
-					);
+					let nominator_exposure_part: Perbill =
+						PerThing::from_rational(nominator.value, exposure.total);
 
-					let nominator_reward: BalanceOf<T> = nominator_exposure_part * validator_leftover_payout;
+					let nominator_reward: BalanceOf<T> =
+						nominator_exposure_part * validator_leftover_payout;
 					// change nominator's rewards about the validator
 					if nominator_reward > Zero::zero() {
 						let mut rewards_info = <RewardsInfoForAccount<T>>::get(&nominator.who);
@@ -444,15 +455,13 @@ impl<T: Config> Pallet<T> {
 							rewards_info.2.push((active_era.index, nominator_reward));
 						}
 						// emit nominator 'EraRewardInfoEx' event
-						Self::deposit_event(
-							Event::<T>::EraRewardInfoEx(
-								active_era.index,
-								validator.clone(),
-								nominator.who.clone(),
-								0u32.into(),
-								nominator_reward
-							)
-						);
+						Self::deposit_event(Event::<T>::EraRewardInfoEx(
+							active_era.index,
+							validator.clone(),
+							nominator.who.clone(),
+							0u32.into(),
+							nominator_reward,
+						));
 						<RewardsInfoForAccount<T>>::insert(&nominator.who, rewards_info);
 					}
 				}
@@ -485,21 +494,24 @@ impl<T: Config> Pallet<T> {
 		});
 		ErasStartSessionIndex::<T>::insert(&new_planned_era, &start_session_index);
 
-
 		// clear all invalid rewards about 'RewardsInfoForAccount'
 		let depth = T::HistoryDepth::get();
-		let rewards_infos: Vec<(T::AccountId, (BalanceOf<T>, BalanceOf<T>, Vec<(EraIndex, BalanceOf<T>)>))> = <RewardsInfoForAccount<T>>::iter().map(|(account, rewards_info)|
-			(account, rewards_info)
-		).collect();
+		let rewards_infos: Vec<(
+			T::AccountId,
+			(BalanceOf<T>, BalanceOf<T>, Vec<(EraIndex, BalanceOf<T>)>),
+		)> = <RewardsInfoForAccount<T>>::iter()
+			.map(|(account, rewards_info)| (account, rewards_info))
+			.collect();
 		for info in rewards_infos.iter() {
-			if !info.1.2.is_empty() && info.1.2[0].0 < new_planned_era.saturating_sub(depth) {
+			if !info.1 .2.is_empty() && info.1 .2[0].0 < new_planned_era.saturating_sub(depth) {
 				let mut new_info = info.clone();
-				new_info.1.2.retain(|index_and_reward|
+				new_info.1 .2.retain(|index_and_reward| {
 					if index_and_reward.0 < new_planned_era.saturating_sub(depth) {
 						false
 					} else {
 						true
-					});
+					}
+				});
 				<RewardsInfoForAccount<T>>::insert(&new_info.0, new_info.1);
 			}
 		}
@@ -567,7 +579,7 @@ impl<T: Config> Pallet<T> {
 			}
 
 			Self::deposit_event(Event::StakingElectionFailed);
-			return None
+			return None;
 		}
 
 		Self::deposit_event(Event::StakersElected);
@@ -782,13 +794,15 @@ impl<T: Config> Pallet<T> {
 	/// nominators.
 	///
 	/// This function is self-weighing as [`DispatchClass::Mandatory`].
-	pub fn get_npos_voters(maybe_max_len: Option<usize>) -> Vec<VoterOf<Self>> {
-		let max_allowed_len = {
-			let all_voter_count = T::VoterList::count() as usize;
-			maybe_max_len.unwrap_or(all_voter_count).min(all_voter_count)
+	pub fn get_npos_voters(bounds: DataProviderBounds) -> Vec<VoterOf<Self>> {
+		let mut voters_size_tracker: StaticTracker<Self> = StaticTracker::default();
+
+		let final_predicted_len = {
+			let all_voter_count = T::VoterList::count();
+			bounds.count.unwrap_or(all_voter_count.into()).min(all_voter_count.into()).0
 		};
 
-		let mut all_voters = Vec::<_>::with_capacity(max_allowed_len);
+		let mut all_voters = Vec::<_>::with_capacity(final_predicted_len as usize);
 
 		// cache a few things.
 		let weight_of = Self::weight_of_fn();
@@ -799,8 +813,8 @@ impl<T: Config> Pallet<T> {
 		let mut min_active_stake = u64::MAX;
 
 		let mut sorted_voters = T::VoterList::iter();
-		while all_voters.len() < max_allowed_len &&
-			voters_seen < (NPOS_MAX_ITERATIONS_COEFFICIENT * max_allowed_len as u32)
+		while all_voters.len() < final_predicted_len as usize
+			&& voters_seen < (NPOS_MAX_ITERATIONS_COEFFICIENT * final_predicted_len as u32)
 		{
 			let voter = match sorted_voters.next() {
 				Some(voter) => {
@@ -810,13 +824,32 @@ impl<T: Config> Pallet<T> {
 				None => break,
 			};
 
+			let voter_weight = weight_of(&voter);
+			// if voter weight is zero, do not consider this voter for the snapshot.
+			if voter_weight.is_zero() {
+				log!(debug, "voter's active balance is 0. skip this voter.");
+				continue;
+			}
+
 			if let Some(Nominations { targets, .. }) = <Nominators<T>>::get(&voter) {
-				let voter_weight = weight_of(&voter);
 				if !targets.is_empty() {
-					all_voters.push((voter.clone(), voter_weight, targets));
+					// Note on lazy nomination quota: we do not check the nomination quota of the
+					// voter at this point and accept all the current nominations. The nomination
+					// quota is only enforced at `nominate` time.
+
+					let voter = (voter, voter_weight, targets);
+					if voters_size_tracker.try_register_voter(&voter, &bounds).is_err() {
+						// no more space left for the election result, stop iterating.
+						Self::deposit_event(Event::<T>::SnapshotVotersSizeExceeded {
+							size: voters_size_tracker.size as u32,
+						});
+						break;
+					}
+
+					all_voters.push(voter);
 					nominators_taken.saturating_inc();
 				} else {
-					// Technically should never happen, but not much we can do about it.
+					// technically should never happen, but not much we can do about it.
 				}
 				min_active_stake =
 					if voter_weight < min_active_stake { voter_weight } else { min_active_stake };
@@ -824,34 +857,41 @@ impl<T: Config> Pallet<T> {
 				// if this voter is a validator:
 				let self_vote = (
 					voter.clone(),
-					weight_of(&voter),
+					voter_weight,
 					vec![voter.clone()]
 						.try_into()
 						.expect("`MaxVotesPerVoter` must be greater than or equal to 1"),
 				);
+
+				if voters_size_tracker.try_register_voter(&self_vote, &bounds).is_err() {
+					// no more space left for the election snapshot, stop iterating.
+					Self::deposit_event(Event::<T>::SnapshotVotersSizeExceeded {
+						size: voters_size_tracker.size as u32,
+					});
+					break;
+				}
 				all_voters.push(self_vote);
 				validators_taken.saturating_inc();
 			} else {
 				// this can only happen if: 1. there a bug in the bags-list (or whatever is the
 				// sorted list) logic and the state of the two pallets is no longer compatible, or
 				// because the nominators is not decodable since they have more nomination than
-				// `T::MaxNominations`. The latter can rarely happen, and is not really an emergency
-				// or bug if it does.
-				log!(
-					warn,
-					"DEFENSIVE: invalid item in `VoterList`: {:?}, this nominator probably has too many nominations now",
-					voter
-				);
+				// `T::NominationsQuota::get_quota`. The latter can rarely happen, and is not
+				// really an emergency or bug if it does.
+				defensive!(
+				    "DEFENSIVE: invalid item in `VoterList`: {:?}, this nominator probably has too many nominations now",
+                    voter,
+                );
 			}
 		}
 
 		// all_voters should have not re-allocated.
-		debug_assert!(all_voters.capacity() == max_allowed_len);
+		debug_assert!(all_voters.capacity() == final_predicted_len as usize);
 
 		Self::register_weight(T::WeightInfo::get_npos_voters(validators_taken, nominators_taken));
 
 		let min_active_stake: T::CurrencyBalance =
-			if all_voters.len() == 0 { 0u64.into() } else { min_active_stake.into() };
+			if all_voters.is_empty() { Zero::zero() } else { min_active_stake.into() };
 
 		MinimumActiveStake::<T>::put(min_active_stake);
 
@@ -869,14 +909,20 @@ impl<T: Config> Pallet<T> {
 	/// Get the targets for an upcoming npos election.
 	///
 	/// This function is self-weighing as [`DispatchClass::Mandatory`].
-	pub fn get_npos_targets(maybe_max_len: Option<usize>) -> Vec<T::AccountId> {
-		let max_allowed_len = maybe_max_len.unwrap_or_else(|| T::TargetList::count() as usize);
-		let mut all_targets = Vec::<T::AccountId>::with_capacity(max_allowed_len);
+	pub fn get_npos_targets(bounds: DataProviderBounds) -> Vec<T::AccountId> {
+		let mut targets_size_tracker: StaticTracker<Self> = StaticTracker::default();
+
+		let final_predicted_len = {
+			let all_target_count = T::TargetList::count();
+			bounds.count.unwrap_or(all_target_count.into()).min(all_target_count.into()).0
+		};
+
+		let mut all_targets = Vec::<T::AccountId>::with_capacity(final_predicted_len as usize);
 		let mut targets_seen = 0;
 
 		let mut targets_iter = T::TargetList::iter();
-		while all_targets.len() < max_allowed_len &&
-			targets_seen < (NPOS_MAX_ITERATIONS_COEFFICIENT * max_allowed_len as u32)
+		while all_targets.len() < final_predicted_len as usize
+			&& targets_seen < (NPOS_MAX_ITERATIONS_COEFFICIENT * final_predicted_len as u32)
 		{
 			let target = match targets_iter.next() {
 				Some(target) => {
@@ -885,6 +931,14 @@ impl<T: Config> Pallet<T> {
 				},
 				None => break,
 			};
+
+			if targets_size_tracker.try_register_target(target.clone(), &bounds).is_err() {
+				// no more space left for the election snapshot, stop iterating.
+				Self::deposit_event(Event::<T>::SnapshotTargetsSizeExceeded {
+					size: targets_size_tracker.size as u32,
+				});
+				break;
+			}
 
 			if Validators::<T>::contains_key(&target) {
 				all_targets.push(target);
@@ -1024,23 +1078,33 @@ impl<T: Config> ElectionDataProvider for Pallet<T> {
 		Ok(Self::validator_count())
 	}
 
-	fn electing_voters(maybe_max_len: Option<usize>) -> data_provider::Result<Vec<VoterOf<Self>>> {
+	fn electing_voters(bounds: DataProviderBounds) -> data_provider::Result<Vec<VoterOf<Self>>> {
 		// This can never fail -- if `maybe_max_len` is `Some(_)` we handle it.
-		let voters = Self::get_npos_voters(maybe_max_len);
-		debug_assert!(maybe_max_len.map_or(true, |max| voters.len() <= max));
+		let voters = Self::get_npos_voters(bounds);
+
+		debug_assert!(!bounds.exhausted(
+			SizeBound(voters.encoded_size() as u32).into(),
+			CountBound(voters.len() as u32).into()
+		));
 
 		Ok(voters)
 	}
 
-	fn electable_targets(maybe_max_len: Option<usize>) -> data_provider::Result<Vec<T::AccountId>> {
-		let target_count = T::TargetList::count();
+	fn electable_targets(bounds: DataProviderBounds) -> data_provider::Result<Vec<T::AccountId>> {
+		let targets = Self::get_npos_targets(bounds);
 
-		// We can't handle this case yet -- return an error.
-		if maybe_max_len.map_or(false, |max_len| target_count > max_len as u32) {
-			return Err("Target snapshot too big")
+		// We can't handle this case yet -- return an error. WIP to improve handling this case in
+		// <https://github.com/paritytech/substrate/pull/13195>.
+		if bounds.exhausted(None, CountBound(T::TargetList::count() as u32).into()) {
+			return Err("Target snapshot too big");
 		}
 
-		Ok(Self::get_npos_targets(None))
+		debug_assert!(!bounds.exhausted(
+			SizeBound(targets.encoded_size() as u32).into(),
+			CountBound(targets.len() as u32).into()
+		));
+
+		Ok(targets)
 	}
 
 	fn next_election_prediction(now: BlockNumberFor<T>) -> BlockNumberFor<T> {
@@ -1292,7 +1356,6 @@ where
 		>],
 		slash_fraction: &[Perbill],
 		slash_session: SessionIndex,
-		disable_strategy: DisableStrategy,
 	) -> Weight {
 		let reward_proportion = SlashRewardFraction::<T>::get();
 		let mut consumed_weight = Weight::from_parts(0, 0);
@@ -1305,7 +1368,7 @@ where
 			add_db_reads_writes(1, 0);
 			if active_era.is_none() {
 				// This offence need not be re-submitted.
-				return consumed_weight
+				return consumed_weight;
 			}
 			active_era.expect("value checked not to be `None`; qed").index
 		};
@@ -1346,7 +1409,7 @@ where
 
 			// Skip if the validator is invulnerable.
 			if invulnerables.contains(stash) {
-				continue
+				continue;
 			}
 
 			let unapplied = slashing::compute_slash::<T>(slashing::SlashParams {
@@ -1357,7 +1420,6 @@ where
 				window_start,
 				now: active_era,
 				reward_proportion,
-				disable_strategy,
 			});
 
 			Self::deposit_event(Event::<T>::SlashReported {
@@ -1594,6 +1656,7 @@ impl<T: Config> SortedListProvider<T::AccountId> for UseNominatorsAndValidatorsM
 impl<T: Config> StakingInterface for Pallet<T> {
 	type AccountId = T::AccountId;
 	type Balance = BalanceOf<T>;
+	type CurrencyToVote = T::CurrencyToVote;
 
 	fn minimum_nominator_bond() -> Self::Balance {
 		MinNominatorBond::<T>::get()
@@ -1654,6 +1717,11 @@ impl<T: Config> StakingInterface for Pallet<T> {
 			.map(|_| ())
 	}
 
+	fn update_payee(_stash: &Self::AccountId, _reward_acc: &Self::AccountId) -> DispatchResult {
+		// unimplemented!("method currently not used");
+		Ok(())
+	}
+
 	fn chill(who: &Self::AccountId) -> DispatchResult {
 		// defensive-only: any account bonded via this interface has the stash set as the
 		// controller, but we have to be sure. Same comment anywhere else that we read this.
@@ -1695,7 +1763,7 @@ impl<T: Config> StakingInterface for Pallet<T> {
 	) -> Result<sp_staking::StakerStatus<Self::AccountId>, DispatchError> {
 		let is_bonded = Self::bonded(who).is_some();
 		if !is_bonded {
-			return Err(Error::<T>::NotStash.into())
+			return Err(Error::<T>::NotStash.into());
 		}
 
 		let is_validator = Validators::<T>::contains_key(&who);
@@ -1713,6 +1781,15 @@ impl<T: Config> StakingInterface for Pallet<T> {
 				Err(Error::<T>::BadState.into())
 			},
 		}
+	}
+
+	/// Whether `who` is a virtual staker whose funds are managed by another pallet.
+	fn is_virtual_staker(_who: &T::AccountId) -> bool {
+		false
+	}
+
+	fn slash_reward_fraction() -> Perbill {
+		SlashRewardFraction::<T>::get()
 	}
 
 	sp_staking::runtime_benchmarks_enabled! {
@@ -1756,8 +1833,8 @@ impl<T: Config> Pallet<T> {
 
 	fn check_count() -> Result<(), &'static str> {
 		ensure!(
-			<T as Config>::VoterList::count() ==
-				Nominators::<T>::count() + Validators::<T>::count(),
+			<T as Config>::VoterList::count()
+				== Nominators::<T>::count() + Validators::<T>::count(),
 			"wrong external count"
 		);
 		ensure!(
@@ -1784,9 +1861,10 @@ impl<T: Config> Pallet<T> {
 		ErasStakers::<T>::iter_prefix_values(era)
 			.map(|expo| {
 				ensure!(
-					expo.total ==
-						expo.own +
-							expo.others
+					expo.total
+						== expo.own
+							+ expo
+								.others
 								.iter()
 								.map(|e| e.value)
 								.fold(Zero::zero(), |acc, x| acc + x),

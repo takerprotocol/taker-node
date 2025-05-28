@@ -20,12 +20,12 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::Codec;
-use pallet_staking::RewardDestination;
-use sp_runtime::{RuntimeDebug, Perbill};
-use codec::{Encode, Decode};
-use sp_std::vec::Vec;
+use codec::{Decode, Encode};
 pub use fp_account::AccountId20;
+use pallet_staking::RewardDestination;
 use scale_info::TypeInfo;
+use sp_runtime::{Perbill, RuntimeDebug};
+use sp_std::vec::Vec;
 
 sp_api::decl_runtime_apis! {
 	pub trait StakingApi<Balance>
@@ -55,16 +55,12 @@ pub struct ValidatorInfo {
 	pub commission: Perbill,
 	pub can_nominated: bool,
 }
-sp_api::decl_runtime_apis!
-{
-    pub trait StakingRpcApi {
-     	fn nominator_info(account: &AccountId20) -> Option<NominatorInfo>;
-     	fn validator_info(account: &AccountId20) -> Option<ValidatorInfo>;
+sp_api::decl_runtime_apis! {
+	pub trait StakingRpcApi {
+		 fn nominator_info(account: &AccountId20) -> Option<NominatorInfo>;
+		 fn validator_info(account: &AccountId20) -> Option<ValidatorInfo>;
 		fn get_validator_rewards(account: &AccountId20, era_index: u32) -> Option<u128>;
-        fn get_nominator_rewards(account: &AccountId20, era_index: u32) -> Option<u128>;
+		fn get_nominator_rewards(account: &AccountId20, era_index: u32) -> Option<u128>;
 		fn all_validators_can_nominate() -> Vec<AccountId20>;
-    }
+	}
 }
-
-
-

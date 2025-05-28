@@ -18,10 +18,7 @@
 
 use super::*;
 use frame_election_provider_support::SortedListProvider;
-use frame_support::{
-	pallet_prelude::ValueQuery, storage_alias,
-	traits::OnRuntimeUpgrade,
-};
+use frame_support::{pallet_prelude::ValueQuery, storage_alias, traits::OnRuntimeUpgrade};
 
 /// Used for release versioning upto v12.
 ///
@@ -205,7 +202,7 @@ pub mod v11 {
 						warn,
 						"new bags-list name is equal to the old one, only bumping the version"
 					);
-					return T::DbWeight::get().reads(1).saturating_add(T::DbWeight::get().writes(1))
+					return T::DbWeight::get().reads(1).saturating_add(T::DbWeight::get().writes(1));
 				}
 
 				move_pallet(old_pallet_name.as_bytes(), new_pallet_name.as_bytes());
@@ -228,7 +225,7 @@ pub mod v11 {
 
 			// skip storage prefix checks for the same pallet names
 			if new_pallet_name == old_pallet_name {
-				return Ok(())
+				return Ok(());
 			}
 
 			let old_pallet_prefix = twox_128(N::get().as_bytes());

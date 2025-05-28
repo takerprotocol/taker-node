@@ -292,6 +292,7 @@ pub(crate) mod mock;
 #[cfg(test)]
 mod tests;
 
+pub mod election_size_tracker;
 pub mod inflation;
 pub mod migrations;
 pub mod slashing;
@@ -305,7 +306,9 @@ use frame_support::{
 	weights::Weight,
 	BoundedVec, CloneNoBound, EqNoBound, PartialEqNoBound, RuntimeDebugNoBound,
 };
+pub use pallet::{pallet::*, *};
 use scale_info::TypeInfo;
+use serde::{Deserialize, Serialize};
 use sp_runtime::{
 	curve::PiecewiseLinear,
 	traits::{AtLeast32BitUnsigned, Convert, Saturating, StaticLookup, Zero},
@@ -318,8 +321,6 @@ use sp_staking::{
 };
 use sp_std::{collections::btree_map::BTreeMap, prelude::*};
 pub use weights::WeightInfo;
-use serde::{Serialize, Deserialize};
-pub use pallet::{pallet::*, *};
 
 pub(crate) const LOG_TARGET: &str = "runtime::staking";
 
@@ -522,7 +523,7 @@ impl<T: Config> StakingLedger<T> {
 			}
 
 			if unlocking_balance >= value {
-				break
+				break;
 			}
 		}
 
@@ -559,7 +560,7 @@ impl<T: Config> StakingLedger<T> {
 		slash_era: EraIndex,
 	) -> BalanceOf<T> {
 		if slash_amount.is_zero() {
-			return Zero::zero()
+			return Zero::zero();
 		}
 
 		use sp_runtime::PerThing as _;
@@ -652,7 +653,7 @@ impl<T: Config> StakingLedger<T> {
 		let mut slashed_unlocking = BTreeMap::<_, _>::new();
 		for i in slash_chunks_priority {
 			if remaining_slash.is_zero() {
-				break
+				break;
 			}
 
 			if let Some(chunk) = self.unlocking.get_mut(i).defensive() {
@@ -660,7 +661,7 @@ impl<T: Config> StakingLedger<T> {
 				// write the new slashed value of this chunk to the map.
 				slashed_unlocking.insert(chunk.era, chunk.value);
 			} else {
-				break
+				break;
 			}
 		}
 
@@ -849,7 +850,19 @@ impl<Balance: AtLeast32BitUnsigned + Clone, T: Get<&'static PiecewiseLinear<'sta
 }
 
 /// Mode of era-forcing.
-#[derive(Copy, Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug, TypeInfo, MaxEncodedLen, Serialize, Deserialize)]
+#[derive(
+	Copy,
+	Clone,
+	PartialEq,
+	Eq,
+	Encode,
+	Decode,
+	RuntimeDebug,
+	TypeInfo,
+	MaxEncodedLen,
+	Serialize,
+	Deserialize,
+)]
 pub enum Forcing {
 	/// Not forcing anything - just let whatever happen.
 	NotForcing,

@@ -9,7 +9,7 @@ license = { workspace = true }
 repository = { workspace = true }
 
 [dependencies]
-parity-scale-codec = { workspace = true }
+codec = { workspace = true }
 
 # Substrate
 frame-system = { workspace = true }
@@ -20,12 +20,15 @@ sp-std = { workspace = true }
 sp-consensus-babe = { workspace = true }
 
 [features]
+default = ["std"]
 std = [
+	"frame-system/std",
 	"frame-support/std",
 	"sp-core/std",
 	"sp-runtime/std",
 	"sp-std/std",
 	"sp-consensus-babe/std",
+	"codec/std",
 ]
 try-runtime = [
 	"frame-support/try-runtime",

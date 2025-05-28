@@ -21,4 +21,7 @@ syn = { version = "2.0.14", features = ["full", "visit"] }
 
 [dev-dependencies]
 sp-runtime = { workspace = true, default-features = true }
-#sp-runtime = { version = "7.0.0", path = "../../../primitives/runtime" }
+
+[features]
+default = ["std"]
+std = []

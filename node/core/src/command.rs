@@ -3,7 +3,8 @@ use crate::cli::{Cli, Subcommand};
 use taker_common_node::cli_opt::{BackendType, BackendTypeConfig, RpcConfig};
 
 use frame_benchmarking_cli::{BenchmarkCmd, SUBSTRATE_REFERENCE_HARDWARE};
-use sc_cli::{ChainSpec, RuntimeVersion, SubstrateCli};
+
+use sc_cli::SubstrateCli;
 use sc_service::PartialComponents;
 
 trait IdentifyChain {
@@ -76,19 +77,6 @@ impl SubstrateCli for Cli {
 				std::path::PathBuf::from(path),
 			)?),
 		})
-	}
-
-	fn native_runtime_version(chain_spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
-		if chain_spec.is_dev() {
-			&taker_dev_runtime::VERSION
-		} else
-		if chain_spec.is_testnet() {
-			&taker_testnet_runtime::VERSION
-		} else if chain_spec.is_mainnet() {
-			&taker_mainnet_runtime::VERSION
-		} else {
-			&taker_dev_runtime::VERSION
-		}
 	}
 }
 
@@ -289,6 +277,8 @@ pub fn run() -> sc_cli::Result<()> {
 			}
 		},
 		Some(Subcommand::Benchmark(cmd)) => {
+			use taker_common_node::rpc::Block;
+
 			let runner = cli.create_runner(cmd)?;
 
 			runner.sync_run(|config| {
@@ -304,7 +294,9 @@ pub fn run() -> sc_cli::Result<()> {
 							);
 						}
 
-						cmd.run::<taker_dev_runtime::Block, taker_dev_node::service::dev::ExecutorDispatch>(config)
+						cmd.run_with_spec::<sp_runtime::traits::HashingFor<Block>, ()>(Some(
+							config.chain_spec,
+						))
 					},
 					BenchmarkCmd::Block(cmd) => {
 						let PartialComponents { client, .. } =
@@ -344,7 +336,8 @@ pub fn run() -> sc_cli::Result<()> {
 				runner.run_node_until_exit(|config| async move {
 					taker_dev_node::service::new_full(config, rpc_config)
 						.map_err(sc_cli::Error::Service)
-			})} else if chain_spec.is_testnet() {
+				})
+			} else if chain_spec.is_testnet() {
 				runner.run_node_until_exit(|config| async move {
 					taker_testnet_node::service::new_full(config, rpc_config)
 						.map_err(sc_cli::Error::Service)

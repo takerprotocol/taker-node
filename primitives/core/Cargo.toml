@@ -3,22 +3,16 @@ name = "bp-core"
 version = "0.0.1"
 description = "Core primitives for taker runtime"
 authors = { workspace = true }
-homepage = { workspace = true}
+homepage = { workspace = true }
 edition = { workspace = true }
 license = { workspace = true }
 repository = { workspace = true }
 
 [dependencies]
-fp-account = { workspace = true }
-fp-self-contained = { workspace = true }
+fp-account = { workspace = true, features = ["serde"] }
 sp-core = { workspace = true }
 sp-runtime = { workspace = true }
 
 [features]
-default = [ "std" ]
-std = [
-	"fp-account/std",
-	"fp-self-contained/std",
-	"sp-core/std",
-	"sp-runtime/std",
-]
+default = ["std"]
+std = ["fp-account/std", "sp-runtime/std", "sp-core/std"]

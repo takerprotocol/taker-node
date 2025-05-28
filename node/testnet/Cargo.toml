@@ -1,6 +1,6 @@
 [package]
 name = "taker-testnet-node"
-version = "1.0.0"
+version = "1.1.0"
 description = "The node specification for taker Node testnet"
 authors = { workspace = true }
 homepage = { workspace = true}
@@ -35,6 +35,9 @@ sc-rpc-api = { workspace = true }
 sc-chain-spec = { workspace = true }
 sc-basic-authorship = { workspace = true }
 sc-consensus-babe-rpc = { workspace = true }
+sc-offchain = { workspace = true }
+sc-consensus-manual-seal = { workspace = true }
+
 # substrate primitives dependencies
 sp-core = { workspace = true, features = ["std"] }
 sp-runtime = { workspace = true, features = ["std"] }
@@ -46,6 +49,7 @@ sp-block-builder = { workspace = true, features = ["std"] }
 sp-timestamp = { workspace = true, features = ["std"] }
 sp-blockchain = { workspace = true }
 sp-consensus = { workspace = true }
+sp-inherents = { workspace = true }
 
 # FRAME dependencies
 pallet-transaction-payment-rpc = { workspace = true }

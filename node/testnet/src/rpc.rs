@@ -8,26 +8,33 @@
 use jsonrpsee::RpcModule;
 use std::sync::Arc;
 
-use taker_common_node::{cli_opt::EthApi as EthApiCmd, rpc::{BabeDeps, TracingConfig}};
-use taker_testnet_runtime::{opaque::Block, AccountId, Balance, Index};
 use sp_api::{CallApiAt, ProvideRuntimeApi};
 use sp_block_builder::BlockBuilder;
 use sp_blockchain::{
 	Backend as BlockchainBackend, Error as BlockChainError, HeaderBackend, HeaderMetadata,
 };
 use sp_consensus::SelectChain;
+use sp_inherents::CreateInherentDataProviders;
 use sp_runtime::traits::BlakeTwo256;
+use taker_common_node::{
+	cli_opt::EthApi as EthApiCmd,
+	rpc::{BabeDeps, DefaultEthConfig, TracingConfig},
+};
+use taker_testnet_runtime::{opaque::Block, AccountId, Balance, Nonce};
 
-use taker_common_node::rpc::{FullDeps, GrandpaDeps, staking::StakingApiServer};
-use sc_client_api::backend::{Backend, StateBackend, StorageProvider};
+use sc_client_api::{
+	backend::{Backend, StateBackend, StorageProvider},
+	UsageProvider,
+};
 pub use sc_client_api::{AuxStore, BlockOf, BlockchainEvents};
 pub use sc_rpc_api::DenyUnsafe;
 use sc_transaction_pool::ChainApi;
 use sc_transaction_pool_api::TransactionPool;
+use taker_common_node::rpc::{staking::StakingApiServer, FullDeps, GrandpaDeps};
 
 /// Instantiate all full RPC extensions.
-pub fn create_full<C, P, BE, SC, A>(
-	deps: FullDeps<C, P, BE, SC, A>,
+pub fn create_full<C, P, BE, SC, A, CIDP>(
+	deps: FullDeps<C, P, BE, SC, A, CIDP>,
 	maybe_tracing_config: Option<TracingConfig>,
 	pubsub_notification_sinks: Arc<
 		fc_mapping_sync::EthereumBlockNotificationSinks<
@@ -40,14 +47,13 @@ where
 	BE::State: StateBackend<BlakeTwo256>,
 	BE::Blockchain: BlockchainBackend<Block>,
 	C: ProvideRuntimeApi<Block>,
-	C: BlockchainEvents<Block>,
+	C: BlockchainEvents<Block> + UsageProvider<Block>,
 	C: StorageProvider<Block, BE>,
 	C: HeaderBackend<Block> + HeaderMetadata<Block, Error = BlockChainError> + 'static,
 	C: CallApiAt<Block>,
 	C: AuxStore,
-	C: StorageProvider<Block, BE>,
 	C: Send + Sync + 'static,
-	C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Index>,
+	C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>,
 	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
 	C::Api: BlockBuilder<Block>,
 	C::Api: sp_consensus_babe::BabeApi<Block>,
@@ -58,6 +64,7 @@ where
 	P: TransactionPool<Block = Block> + 'static,
 	A: ChainApi<Block = Block> + 'static,
 	SC: SelectChain<Block> + 'static,
+	CIDP: CreateInherentDataProviders<Block, ()> + Send + 'static,
 {
 	use fc_rpc::{
 		Eth, EthApiServer, EthFilter, EthFilterApiServer, EthPubSub, EthPubSubApiServer, Net,
@@ -67,12 +74,13 @@ where
 	use fc_rpc_trace::{Trace, TraceServer};
 	use fc_rpc_txpool::{TxPool, TxPoolServer};
 	use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApiServer};
+	use sc_consensus_babe_rpc::{Babe, BabeApiServer};
 	use sc_consensus_grandpa_rpc::{Grandpa, GrandpaApiServer};
 	use substrate_frame_rpc_system::{System, SystemApiServer};
-	use sc_consensus_babe_rpc::{Babe, BabeApiServer};
 
 	let mut io = RpcModule::new(());
 	let FullDeps {
+		client_version,
 		client,
 		pool,
 		select_chain,
@@ -95,12 +103,10 @@ where
 		logs_request_timeout,
 		forced_parent_hashes,
 		sync_service,
+		pending_create_inherent_data_providers,
 	} = deps;
 
-	let BabeDeps {
-		babe_worker_handle,
-		keystore,
-	} = babe;
+	let BabeDeps { babe_worker_handle, keystore } = babe;
 
 	let GrandpaDeps {
 		shared_voter_state,
@@ -117,7 +123,8 @@ where
 	io.merge(
 		Babe::new(client.clone(), babe_worker_handle.clone(), keystore, select_chain, deny_unsafe)
 			.into_rpc(),
-	).ok();
+	)
+	.ok();
 
 	io.merge(
 		Grandpa::new(
@@ -135,7 +142,7 @@ where
 		EthFilter::new(
 			client.clone(),
 			frontier_backend.clone(),
-			fc_rpc::TxPool::new(client.clone(), graph.clone()),
+			graph.clone(),
 			filter_pool,
 			500_usize, // max stored filters
 			max_past_logs,
@@ -157,10 +164,11 @@ where
 	)
 	.ok();
 
-	io.merge(Web3::new(Arc::clone(&client)).into_rpc()).ok();
+	io.merge(Web3::new(&client_version).into_rpc()).ok();
 
 	// pallet_staking rpc
-	io.merge(taker_common_node::rpc::staking::StakingClient::new(client.clone()).into_rpc()).ok();
+	io.merge(taker_common_node::rpc::staking::StakingClient::new(client.clone()).into_rpc())
+		.ok();
 
 	io.merge(
 		EthPubSub::new(
@@ -194,7 +202,7 @@ where
 	let convert_transaction: Option<Never> = None;
 
 	io.merge(
-		Eth::new(
+		Eth::<_, _, _, _, _, _, _, DefaultEthConfig<C, BE>>::new(
 			Arc::clone(&client),
 			Arc::clone(&pool),
 			graph.clone(),
@@ -202,14 +210,17 @@ where
 			Arc::clone(&sync_service),
 			signers,
 			Arc::clone(&overrides),
-			Arc::clone(&frontier_backend),
+			frontier_backend.clone(),
 			is_authority,
 			Arc::clone(&block_data_cache),
 			fee_history_cache,
 			fee_history_limit,
 			10,
 			forced_parent_hashes,
+			pending_create_inherent_data_providers,
+			None, // TODO use BabeConsensusDataProvider
 		)
+		.replace_config::<DefaultEthConfig<C, BE>>()
 		.into_rpc(),
 	)
 	.ok();

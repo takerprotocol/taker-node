@@ -13,10 +13,11 @@ repository = { workspace = true }
 clap = { workspace = true }
 futures = { workspace = true }
 tokio = { workspace = true, features = ["macros", "sync"] }
-parity-scale-codec = { workspace = true }
+codec = { workspace = true }
 jsonrpsee = { workspace = true }
 hex = { workspace = true }
 serde = { workspace = true }
+thiserror = { workspace = true }
 
 # substrate client dependencies
 sc-client-api = { workspace = true }
@@ -36,6 +37,7 @@ pallet-staking-runtime-api = { workspace = true }
 pallet-staking = { workspace = true }
 
 # substrate primitives dependencies
+sp-io = { workspace = true, features = ["std"] }
 sp-core = { workspace = true, features = ["std"] }
 sp-runtime = { workspace = true, features = ["std"] }
 sp-api = { workspace = true, features = ["std"] }
@@ -45,6 +47,7 @@ sp-keystore = { workspace = true, features = ["std"] }
 
 # Frontier dependencies
 fc-db = { workspace = true }
+fc-api = { workspace = true }
 fc-rpc = { workspace = true, features = ["rpc-binary-search-estimate"] }
 fc-rpc-core = { workspace = true }
 fp-rpc-debug = { workspace = true }
@@ -53,6 +56,7 @@ fp-rpc = { workspace = true }
 fc-rpc-debug = { workspace = true }
 fc-rpc-trace = { workspace = true }
 fp-account = { workspace = true }
+fp-ext = { workspace = true, features = ["std"] }
 
 # Local Dependencies
 bp-core = { workspace = true }

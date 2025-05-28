@@ -1,3 +1,5 @@
+#![cfg_attr(not(feature = "std"), no_std)]
+
 use bp_core::AccountId;
 pub use taker_common_constants::{currency, time};
 
@@ -21,7 +23,17 @@ pub const BABE_GENESIS_EPOCH_CONFIG: sp_consensus_babe::BabeEpochConfiguration =
 	};
 
 /// admin for whitelist, 0xe17AcfCcDdEBaCAa5Fbc267FB3FEAE753DE5Aa39
-pub const DEFAULT_ADMIN: AccountId = AccountId{0: [225u8, 122, 207, 204, 221, 235, 172, 170, 95, 188, 38, 127, 179, 254, 174, 117, 61, 229, 170, 57]};
+pub const DEFAULT_ADMIN: AccountId = AccountId {
+	0: [
+		225u8, 122, 207, 204, 221, 235, 172, 170, 95, 188, 38, 127, 179, 254, 174, 117, 61, 229,
+		170, 57,
+	],
+};
 
 /// gas fee collector, 0xe17AcfCcDdEBaCAa5Fbc267FB3FEAE753DE5Aa39
-pub const FEE_COLLECTOR: AccountId = AccountId{0: [225u8, 122, 207, 204, 221, 235, 172, 170, 95, 188, 38, 127, 179, 254, 174, 117, 61, 229, 170, 57]};
+pub const FEE_COLLECTOR: AccountId = AccountId {
+	0: [
+		225u8, 122, 207, 204, 221, 235, 172, 170, 95, 188, 38, 127, 179, 254, 174, 117, 61, 229,
+		170, 57,
+	],
+};

@@ -25,7 +25,7 @@ use frame_support::{
 	traits::{
 		Currency, Defensive, DefensiveResult, DefensiveSaturating, EnsureOrigin,
 		EstimateNextNewSession, Get, LockIdentifier, LockableCurrency, OnUnbalanced, TryCollect,
-		UnixTime, CurrencyToVote,
+		UnixTime,
 	},
 	weights::Weight,
 	BoundedVec,
@@ -35,7 +35,7 @@ use sp_runtime::{
 	traits::{CheckedSub, SaturatedConversion, StaticLookup, Zero},
 	ArithmeticError, Perbill, Percent,
 };
-use sp_staking::{EraIndex, SessionIndex};
+use sp_staking::{currency_to_vote::CurrencyToVote, EraIndex, SessionIndex};
 use sp_std::prelude::*;
 
 mod impls;
@@ -589,8 +589,13 @@ pub mod pallet {
 	/// Update at era_payout and rewards_payout
 	#[pallet::storage]
 	#[pallet::getter(fn rewards_info_for_account)]
-	pub type RewardsInfoForAccount<T: Config> =
-	StorageMap<_, Twox64Concat, T::AccountId, (BalanceOf<T>, BalanceOf<T>, Vec<(EraIndex, BalanceOf<T>)>), ValueQuery>;
+	pub type RewardsInfoForAccount<T: Config> = StorageMap<
+		_,
+		Twox64Concat,
+		T::AccountId,
+		(BalanceOf<T>, BalanceOf<T>, Vec<(EraIndex, BalanceOf<T>)>),
+		ValueQuery,
+	>;
 
 	#[pallet::genesis_config]
 	#[derive(frame_support::DefaultNoBound)]
@@ -610,7 +615,7 @@ pub mod pallet {
 	}
 
 	#[pallet::genesis_build]
-	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+	impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
 		fn build(&self) {
 			ValidatorCount::<T>::put(self.validator_count);
 			MinimumValidatorCount::<T>::put(self.minimum_validator_count);
@@ -657,8 +662,8 @@ pub mod pallet {
 					_ => Ok(()),
 				});
 				assert!(
-					ValidatorCount::<T>::get() <=
-						<T::ElectionProvider as ElectionProviderBase>::MaxWinners::get()
+					ValidatorCount::<T>::get()
+						<= <T::ElectionProvider as ElectionProviderBase>::MaxWinners::get()
 				);
 			}
 			// all voters are reported to the `VoterList`.
@@ -715,7 +720,7 @@ pub mod pallet {
 		/// Bond extra balance from stash free balance
 		BondExtra(T::AccountId, BalanceOf<T>),
 		/// Bond balance from unbund balance, not free balance
-		ReBond{ stash: T::AccountId, amount: BalanceOf<T> },
+		ReBond { stash: T::AccountId, amount: BalanceOf<T> },
 		/// A controller want to be Nominator and try nominate some validator
 		Nominator(T::AccountId, Vec<T::AccountId>),
 		/// Voters size limit reached.
@@ -784,6 +789,8 @@ pub mod pallet {
 		CommissionTooLow,
 		/// Some bound is not met.
 		BoundNotMet,
+		/// Provided reward destination is not allowed.
+		RewardDestinationRestricted,
 	}
 
 	#[pallet::hooks]
@@ -820,8 +827,8 @@ pub mod pallet {
 
 			// ensure election results are always bounded with the same value
 			assert!(
-				<T::ElectionProvider as ElectionProviderBase>::MaxWinners::get() ==
-					<T::GenesisElectionProvider as ElectionProviderBase>::MaxWinners::get()
+				<T::ElectionProvider as ElectionProviderBase>::MaxWinners::get()
+					== <T::GenesisElectionProvider as ElectionProviderBase>::MaxWinners::get()
 			);
 
 			sp_std::if_std! {
@@ -870,17 +877,17 @@ pub mod pallet {
 			let stash = ensure_signed(origin)?;
 
 			if <Bonded<T>>::contains_key(&stash) {
-				return Err(Error::<T>::AlreadyBonded.into())
+				return Err(Error::<T>::AlreadyBonded.into());
 			}
 
 			let controller = T::Lookup::lookup(controller)?;
 			if <Ledger<T>>::contains_key(&controller) {
-				return Err(Error::<T>::AlreadyPaired.into())
+				return Err(Error::<T>::AlreadyPaired.into());
 			}
 
 			// Reject a bond which is considered to be _dust_.
 			if value < T::Currency::minimum_balance() {
-				return Err(Error::<T>::InsufficientBond.into())
+				return Err(Error::<T>::InsufficientBond.into());
 			}
 
 			frame_system::Pallet::<T>::inc_consumers(&stash).map_err(|_| Error::<T>::BadState)?;
@@ -1038,9 +1045,7 @@ pub mod pallet {
 
 				// Note: in case there is no current era it is fine to bond one era more.
 				let era = Self::current_era().unwrap_or(0) + T::BondingDuration::get();
-				if let Some(chunk) =
-					ledger.unlocking.last_mut().filter(|chunk| chunk.era == era)
-				{
+				if let Some(chunk) = ledger.unlocking.last_mut().filter(|chunk| chunk.era == era) {
 					// To keep the chunk count down, we only keep one chunk per era. Since
 					// `unlocking` is a FiFo queue, if a chunk exists for `era` we know that it will
 					// be the last one.
@@ -1268,7 +1273,7 @@ pub mod pallet {
 			let old_controller = Self::bonded(&stash).ok_or(Error::<T>::NotStash)?;
 			let controller = T::Lookup::lookup(controller)?;
 			if <Ledger<T>>::contains_key(&controller) {
-				return Err(Error::<T>::AlreadyPaired.into())
+				return Err(Error::<T>::AlreadyPaired.into());
 			}
 			if controller != old_controller {
 				<Bonded<T>>::insert(&stash, &controller);
@@ -1560,8 +1565,8 @@ pub mod pallet {
 			let _ = ensure_signed(origin)?;
 
 			let ed = T::Currency::minimum_balance();
-			let reapable = T::Currency::total_balance(&stash) < ed ||
-				Self::ledger(Self::bonded(stash.clone()).ok_or(Error::<T>::NotStash)?)
+			let reapable = T::Currency::total_balance(&stash) < ed
+				|| Self::ledger(Self::bonded(stash.clone()).ok_or(Error::<T>::NotStash)?)
 					.map(|l| l.total)
 					.unwrap_or_default() < ed;
 			ensure!(reapable, Error::<T>::FundedTarget);
@@ -1717,7 +1722,7 @@ pub mod pallet {
 
 			if Nominators::<T>::contains_key(&stash) && Nominators::<T>::get(&stash).is_none() {
 				Self::chill_stash(&stash);
-				return Ok(())
+				return Ok(());
 			}
 
 			if caller != controller {

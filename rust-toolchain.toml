@@ -1,5 +1,6 @@
 [toolchain]
-channel = "stable"
-components = ["rustfmt", "clippy"]
-targets = ["wasm32-unknown-unknown"]
+# Stable
+channel = "1.79.0" # rustc 1.79.0 (129f3b996 2024-06-10)
+components = ["clippy", "rustfmt", "rust-src"]
 profile = "minimal"
+targets = ["wasm32-unknown-unknown"]

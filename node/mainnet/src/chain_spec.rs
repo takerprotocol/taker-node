@@ -1,12 +1,14 @@
 use fp_evm::GenesisAccount;
-use taker_mainnet_runtime::{AccountId, Balance, WASM_BINARY, GenesisConfig, SS58Prefix, StakerStatus, ImOnlineId, opaque::SessionKeys, Precompiles};
+use hex_literal::hex;
+use sc_chain_spec::Properties;
 use sc_service::ChainType;
 use sp_consensus_babe::AuthorityId as BabeId;
 use sp_consensus_grandpa::AuthorityId as GrandpaId;
-use sp_core::{ByteArray, ed25519, Pair, Public, sr25519};
-use hex_literal::hex;
-use sc_chain_spec::Properties;
-use sp_runtime::Perbill;
+use sp_core::{ed25519, sr25519, ByteArray, Pair, Public};
+use taker_mainnet_runtime::{
+	opaque::SessionKeys, AccountId, Balance, ImOnlineId, Precompiles, SS58Prefix, StakerStatus,
+	WASM_BINARY,
+};
 
 // The URL for the telemetry server.
 // const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
@@ -14,7 +16,7 @@ const INITIAL_STAKING: u128 = 2_000 * 10u128.pow(18);
 const ENDOWED_AMOUNT: u128 = 40_000 * 10u128.pow(18);
 
 /// Specialized `ChainSpec`. This is a specialization of the general Substrate ChainSpec type.
-pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig>;
+pub type ChainSpec = sc_service::GenericChainSpec;
 
 /// Generate an Aura authority key.
 pub fn authority_keys_from_seed(s: &str) -> (BabeId, GrandpaId) {
@@ -37,11 +39,7 @@ fn properties() -> Properties {
 }
 
 fn session_keys(babe: BabeId, grandpa: GrandpaId, im_online: ImOnlineId) -> SessionKeys {
-	SessionKeys {
-		babe,
-		grandpa,
-		im_online,
-	}
+	SessionKeys { babe, grandpa, im_online }
 }
 
 pub fn authority_id_from_pk(
@@ -62,91 +60,77 @@ pub fn authority_id_from_pk(
 	(
 		accountid1,
 		accountid2,
-		sr25519::Public::from_slice(&hex::decode(babe_and_gran[0]).expect("babe pk decode failed")).unwrap()
+		sr25519::Public::from_slice(&hex::decode(babe_and_gran[0]).expect("babe pk decode failed"))
+			.unwrap()
 			.into(),
-		ed25519::Public::from_slice(&hex::decode(babe_and_gran[1]).expect("gran pk decode failed")).unwrap()
+		ed25519::Public::from_slice(&hex::decode(babe_and_gran[1]).expect("gran pk decode failed"))
+			.unwrap()
 			.into(),
 		sr25519::Public::from_slice(
 			&hex::decode(babe_and_gran[2]).expect("im_online pk decode failed"),
-		).unwrap()
-			.into(),
+		)
+		.unwrap()
+		.into(),
 	)
 }
 
 pub fn mainnet_config() -> ChainSpec {
-	let wasm_binary = WASM_BINARY.expect("WASM not available");
-	ChainSpec::from_genesis(
-		// Name
-		"Taker Mainnet",
-		// ID
-		"Mainnet",
-		ChainType::Live,
-		move || {
-			mainnet_genesis(
-				wasm_binary,
-				// Sudo account
-				AccountId::from(hex!("86877CA251E15Add75d140a3f8C5707D4e47D88a")),
-				// Pre-funded accounts
-				vec![
-					(AccountId::from(hex!("86877CA251E15Add75d140a3f8C5707D4e47D88a")), ENDOWED_AMOUNT), //sudo account,
-					(AccountId::from(hex!("F6EF71fB82fD1d8a90a4779ef1eA23a11Ee012e2")), ENDOWED_AMOUNT),
-					(AccountId::from(hex!("329DABfc5148A49Bd5ae1129aaAd5a7294DDA206")), ENDOWED_AMOUNT),
-					(AccountId::from(hex!("AE100Ed673FF338Ede70236fa3D971C57c325f89")), ENDOWED_AMOUNT),
-				],
-				// Initial NPOS authorities
-				vec![
-					authority_id_from_pk(
-						AccountId::from(hex!("F6EF71fB82fD1d8a90a4779ef1eA23a11Ee012e2")),
-						AccountId::from(hex!("F6EF71fB82fD1d8a90a4779ef1eA23a11Ee012e2")),
-						"0xb88dc3a5819e681b0857ce9513f42b1f5c9d006160faa368011af96b100cb256",
-						"0x1D1E813EF5CEE7DA27F6DEF94FD04491FA1098DB3B9A8646DA0B0417E490ADDC",
-						"0xb88dc3a5819e681b0857ce9513f42b1f5c9d006160faa368011af96b100cb256",
-					),
-					authority_id_from_pk(
-						AccountId::from(hex!("329DABfc5148A49Bd5ae1129aaAd5a7294DDA206")),
-						AccountId::from(hex!("329DABfc5148A49Bd5ae1129aaAd5a7294DDA206")),
-						"0x5675a3732e4b911128b7082ba5936266da0f893c8fd87b4a4f900fb84a62d37d",
-						"0xC36EBA7DE02BFA88E3910C82B7133AA6B5917B0FD2B0992B045E3EF84FC2AD4B",
-						"0x5675a3732e4b911128b7082ba5936266da0f893c8fd87b4a4f900fb84a62d37d",
-					),
-					authority_id_from_pk(
-						AccountId::from(hex!("AE100Ed673FF338Ede70236fa3D971C57c325f89")),
-						AccountId::from(hex!("AE100Ed673FF338Ede70236fa3D971C57c325f89")),
-						"0x347e3ba27df3ccf65d3ec16c540c87b6b558212a76295eab28f377c4f6350757",
-						"0xE84F5112EE68425F306001E9729283F74ABA3BA0C7704D48226683D67888A500",
-						"0x347e3ba27df3ccf65d3ec16c540c87b6b558212a76295eab28f377c4f6350757",
-					)
-				],
-				1125,
-			)
-		},
-		// Bootnodes
-		vec![],
-		// Telemetry
-		None,
-		// Protocol ID
-		Some("takerMainnet"),
-		// Fork ID
-		None,
-		// Properties
-		Some(properties()),
-		// Extensions
-		None,
-	)
+	ChainSpec::builder(WASM_BINARY.expect("WASM not available"), Default::default())
+		.with_name("Taker Mainnet")
+		.with_id("Mainnet")
+		.with_protocol_id("takerMainnet")
+		.with_chain_type(ChainType::Live)
+		.with_properties(properties())
+		.with_genesis_config_patch(mainnet_genesis(
+			// Sudo account
+			AccountId::from(hex!("86877CA251E15Add75d140a3f8C5707D4e47D88a")),
+			// Pre-funded accounts
+			vec![
+				(AccountId::from(hex!("86877CA251E15Add75d140a3f8C5707D4e47D88a")), ENDOWED_AMOUNT), //sudo account,
+				(AccountId::from(hex!("F6EF71fB82fD1d8a90a4779ef1eA23a11Ee012e2")), ENDOWED_AMOUNT),
+				(AccountId::from(hex!("329DABfc5148A49Bd5ae1129aaAd5a7294DDA206")), ENDOWED_AMOUNT),
+				(AccountId::from(hex!("AE100Ed673FF338Ede70236fa3D971C57c325f89")), ENDOWED_AMOUNT),
+			],
+			// Initial NPOS authorities
+			vec![
+				authority_id_from_pk(
+					AccountId::from(hex!("F6EF71fB82fD1d8a90a4779ef1eA23a11Ee012e2")),
+					AccountId::from(hex!("F6EF71fB82fD1d8a90a4779ef1eA23a11Ee012e2")),
+					"0xb88dc3a5819e681b0857ce9513f42b1f5c9d006160faa368011af96b100cb256",
+					"0x1D1E813EF5CEE7DA27F6DEF94FD04491FA1098DB3B9A8646DA0B0417E490ADDC",
+					"0xb88dc3a5819e681b0857ce9513f42b1f5c9d006160faa368011af96b100cb256",
+				),
+				authority_id_from_pk(
+					AccountId::from(hex!("329DABfc5148A49Bd5ae1129aaAd5a7294DDA206")),
+					AccountId::from(hex!("329DABfc5148A49Bd5ae1129aaAd5a7294DDA206")),
+					"0x5675a3732e4b911128b7082ba5936266da0f893c8fd87b4a4f900fb84a62d37d",
+					"0xC36EBA7DE02BFA88E3910C82B7133AA6B5917B0FD2B0992B045E3EF84FC2AD4B",
+					"0x5675a3732e4b911128b7082ba5936266da0f893c8fd87b4a4f900fb84a62d37d",
+				),
+				authority_id_from_pk(
+					AccountId::from(hex!("AE100Ed673FF338Ede70236fa3D971C57c325f89")),
+					AccountId::from(hex!("AE100Ed673FF338Ede70236fa3D971C57c325f89")),
+					"0x347e3ba27df3ccf65d3ec16c540c87b6b558212a76295eab28f377c4f6350757",
+					"0xE84F5112EE68425F306001E9729283F74ABA3BA0C7704D48226683D67888A500",
+					"0x347e3ba27df3ccf65d3ec16c540c87b6b558212a76295eab28f377c4f6350757",
+				),
+			],
+			1125,
+		))
+		.build()
 }
 
 /// Configure initial storage state for FRAME modules.
 fn mainnet_genesis(
-	wasm_binary: &[u8],
 	sudo_key: AccountId,
 	endowed_accounts: Vec<(AccountId, Balance)>,
 	initial_authorities: Vec<(AccountId, AccountId, BabeId, GrandpaId, ImOnlineId)>,
-	// initial_authorities: Vec<(AuraId, GrandpaId, AccountId)>,
 	chain_id: u64,
-) -> GenesisConfig {
+) -> serde_json::Value {
 	use taker_mainnet_runtime::{
-		BalancesConfig, EVMChainIdConfig, EVMConfig, GrandpaConfig, SudoConfig, SystemConfig,
-		BabeConfig, SessionConfig, StakingConfig, ImOnlineConfig, AssetCurrencyConfig,
+		AssetCurrencyConfig, BabeConfig, BalancesConfig, EVMChainIdConfig, EVMConfig,
+		GrandpaConfig, ImOnlineConfig, Perbill, RuntimeGenesisConfig, SessionConfig, StakingConfig,
+		SudoConfig,
 	};
 	// This is the simplest bytecode to revert without returning any data.
 	// We will pre-deploy it under all of our precompiles to ensure they can be called from
@@ -154,22 +138,16 @@ fn mainnet_genesis(
 	// (PUSH1 0x00 PUSH1 0x00 REVERT)
 	let revert_bytecode = vec![0x60, 0x00, 0x60, 0x00, 0xFD];
 
-	GenesisConfig {
+	let config = RuntimeGenesisConfig {
 		// System
-		system: SystemConfig {
-			// Add Wasm runtime to storage.
-			code: wasm_binary.to_vec(),
-			..Default::default()
-		},
+		system: Default::default(),
 		sudo: SudoConfig {
 			// Assign network admin rights.
 			key: Some(sudo_key),
 		},
 
 		// Monetary
-		balances: BalancesConfig {
-			balances: endowed_accounts.clone(),
-		},
+		balances: BalancesConfig { balances: endowed_accounts.clone() },
 		asset_currency: AssetCurrencyConfig {
 			symbol: "veTAKER".as_bytes().to_vec(),
 			decimals: 18,
@@ -178,23 +156,15 @@ fn mainnet_genesis(
 		transaction_payment: Default::default(),
 
 		// Consensus
-		// aura: AuraConfig {
-		// 	authorities: initial_authorities.iter().map(|x| (x.0.clone())).collect(),
-		// },
 		babe: BabeConfig {
 			authorities: vec![],
-			epoch_config: Some(taker_mainnet_runtime::BABE_GENESIS_EPOCH_CONFIG),
+			epoch_config: taker_mainnet_runtime::BABE_GENESIS_EPOCH_CONFIG,
+			..Default::default()
 		},
 		session: SessionConfig {
 			keys: initial_authorities
 				.iter()
-				.map(|x| {
-					(
-						x.0,
-						x.0,
-						session_keys(x.2.clone(), x.3.clone(), x.4.clone()),
-					)
-				})
+				.map(|x| (x.0, x.0, session_keys(x.2.clone(), x.3.clone(), x.4.clone())))
 				.collect::<Vec<_>>(),
 		},
 		staking: StakingConfig {
@@ -214,15 +184,10 @@ fn mainnet_genesis(
 		},
 		im_online: ImOnlineConfig { keys: vec![] },
 
-		grandpa: GrandpaConfig {
-			authorities: vec![],
-		},
+		grandpa: GrandpaConfig { authorities: vec![], ..Default::default() },
 
 		// EVM compatibility
-		evm_chain_id: EVMChainIdConfig {
-			chain_id,
-			..Default::default()
-		},
+		evm_chain_id: EVMChainIdConfig { chain_id, ..Default::default() },
 		evm: EVMConfig {
 			// We need _some_ code inserted at the precompile address so that
 			// the evm will actually call the address.
@@ -245,6 +210,7 @@ fn mainnet_genesis(
 		ethereum: Default::default(),
 		dynamic_fee: Default::default(),
 		base_fee: Default::default(),
+	};
 
-	}
+	serde_json::to_value(&config).expect("Could not build genesis config.")
 }
