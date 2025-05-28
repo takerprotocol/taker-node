@@ -1491,9 +1491,7 @@ pub mod pallet {
 		/// ## Complexity
 		/// - At most O(MaxNominatorRewardedPerValidator).
 		#[pallet::call_index(18)]
-		#[pallet::weight(T::WeightInfo::payout_stakers_alive_staked(
-			T::MaxNominatorRewardedPerValidator::get()
-		))]
+		#[pallet::weight(T::WeightInfo::payout_stakers_alive_staked(1))]
 		pub fn payout_stakers(
 			origin: OriginFor<T>,
 			_validator_stash: T::AccountId,
@@ -1788,6 +1786,15 @@ pub mod pallet {
 		pub fn set_min_commission(origin: OriginFor<T>, new: Perbill) -> DispatchResult {
 			T::AdminOrigin::ensure_origin(origin)?;
 			MinCommission::<T>::put(new);
+			Ok(())
+		}
+
+		#[pallet::call_index(26)]
+		#[pallet::weight(0)]
+		pub fn set_min_validator_count(origin: OriginFor<T>, new: u32) -> DispatchResult {
+			ensure_root(origin)?;
+			let count = new.max(1);
+			MinimumValidatorCount::<T>::put(count);
 			Ok(())
 		}
 	}

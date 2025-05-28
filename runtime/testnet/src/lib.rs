@@ -143,7 +143,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	// The version of the authorship interface.
 	authoring_version: 1,
 	// The version of the runtime spec.
-	spec_version: 114,
+	spec_version: 117,
 	// The version of the implementation of the spec.
 	impl_version: 1,
 	// A list of supported runtime APIs along with their versions.
@@ -504,7 +504,6 @@ parameter_types! {
 	/// )
 	pub PrecompilesValue: Precompiles = TakerPrecompiles::<_>::new();
 	pub const GasLimitPovSizeRatio: u64 = 4;
-	pub const GasLimitStorageGrowthRatio: u64 = 366;
 }
 
 pub struct TransactionConverter;

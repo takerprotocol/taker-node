@@ -14,10 +14,7 @@ pub mod fee {
 
 	/// Approximate ratio of the amount of Weight per Gas.
 	/// u64 works for approximations because Weight is a very small unit compared to gas.
-	pub const WEIGHT_PER_GAS_NORMAL: u64 = WEIGHT_REF_TIME_PER_SECOND / GAS_PER_SECOND;
-
-	/// Weight : Gas = 1 : 1.
-	pub const WEIGHT_PER_GAS: u64 = 1;
+	pub const WEIGHT_PER_GAS: u64 = WEIGHT_REF_TIME_PER_SECOND / GAS_PER_SECOND;
 }
 pub const BABE_GENESIS_EPOCH_CONFIG: sp_consensus_babe::BabeEpochConfiguration =
 	sp_consensus_babe::BabeEpochConfiguration {

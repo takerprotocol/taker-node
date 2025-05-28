@@ -1,4 +1,3 @@
-use frame_support::dispatch::{GetDispatchInfo, PostDispatchInfo};
 use pallet_evm::{
 	IsPrecompileResult, Precompile, PrecompileHandle, PrecompileResult, PrecompileSet,
 };
@@ -14,7 +13,6 @@ use pallets_precompile::{
 	asset_currency::AssetCurrencyPrecompile, native_currency::NativeCurrencyPrecompile,
 	staking::StakingPrecompile,
 };
-use sp_runtime::traits::Dispatchable;
 
 pub struct TakerPrecompiles<R>(PhantomData<R>);
 
@@ -47,11 +45,6 @@ where
 impl<R> PrecompileSet for TakerPrecompiles<R>
 where
 	R: pallet_asset_currency::Config + pallet_evm::Config,
-	<R as frame_system::Config>::RuntimeCall:
-		Dispatchable<PostInfo = PostDispatchInfo> + GetDispatchInfo,
-	<<R as frame_system::Config>::RuntimeCall as Dispatchable>::RuntimeOrigin:
-		From<Option<R::AccountId>>,
-	<R as frame_system::Config>::RuntimeCall: From<pallet_asset_currency::Call<R>>,
 	AssetCurrencyPrecompile<R>: Precompile,
 	NativeCurrencyPrecompile<R>: Precompile,
 	StakingPrecompile<R>: Precompile,

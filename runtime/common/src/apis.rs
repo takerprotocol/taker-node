@@ -302,6 +302,8 @@ macro_rules! impl_common_runtime_apis {
 					estimate: bool,
 					access_list: Option<Vec<(H160, Vec<H256>)>>,
 				) -> Result<pallet_evm::CallInfo, sp_runtime::DispatchError> {
+					use pallet_evm::GasWeightMapping as _;
+
 					let config = if estimate {
 						let mut config = <Runtime as pallet_evm::Config>::config().clone();
 						config.estimate = true;
@@ -310,31 +312,32 @@ macro_rules! impl_common_runtime_apis {
 						None
 					};
 
-					let is_transactional = false;
-					let validate = true;
-					let evm_config = config.as_ref().unwrap_or(<Runtime as pallet_evm::Config>::config());
-
+					// Estimated encoded transaction size must be based on the heaviest transaction
+					// type (EIP1559Transaction) to be compatible with all transaction types.
 					let mut estimated_transaction_len = data.len() +
-						20 + // to
-						20 + // from
-						32 + // value
-						32 + // gas_limit
-						32 + // nonce
-						1 + // TransactionAction
-						8 + // chain id
-						65; // signature
+						// pallet ethereum index: 1
+						// transact call index: 1
+						// Transaction enum variant: 1
+						// chain_id 8 bytes
+						// nonce: 32
+						// max_priority_fee_per_gas: 32
+						// max_fee_per_gas: 32
+						// gas_limit: 32
+						// action: 21 (enum variant + call address)
+						// value: 32
+						// access_list: 1 (empty vec size)
+						// 65 bytes signature
+						258;
 
-					if max_fee_per_gas.is_some() {
-						estimated_transaction_len += 32;
-					}
-					if max_priority_fee_per_gas.is_some() {
-						estimated_transaction_len += 32;
-					}
 					if access_list.is_some() {
 						estimated_transaction_len += access_list.encoded_size();
 					}
 
-					let gas_limit = gas_limit.min(u64::MAX.into()).low_u64();
+					let gas_limit = if gas_limit > U256::from(u64::MAX) {
+						u64::MAX
+					} else {
+						gas_limit.low_u64()
+					};
 					let without_base_extrinsic_weight = true;
 
 					let (weight_limit, proof_size_base_cost) =
@@ -358,11 +361,11 @@ macro_rules! impl_common_runtime_apis {
 						max_priority_fee_per_gas,
 						nonce,
 						access_list.unwrap_or_default(),
-						is_transactional,
-						validate,
+						false,
+						true,
 						weight_limit,
 						proof_size_base_cost,
-						evm_config,
+						config.as_ref().unwrap_or(<Runtime as pallet_evm::Config>::config()),
 					).map_err(|err| err.error.into())
 				}
 				fn create(
@@ -376,6 +379,8 @@ macro_rules! impl_common_runtime_apis {
 					estimate: bool,
 					access_list: Option<Vec<(H160, Vec<H256>)>>,
 				) -> Result<pallet_evm::CreateInfo, sp_runtime::DispatchError> {
+					use pallet_evm::GasWeightMapping as _;
+
 					let config = if estimate {
 						let mut config = <Runtime as pallet_evm::Config>::config().clone();
 						config.estimate = true;
@@ -384,18 +389,15 @@ macro_rules! impl_common_runtime_apis {
 						None
 					};
 
-					let is_transactional = false;
-					let validate = true;
-					let evm_config = config.as_ref().unwrap_or(<Runtime as pallet_evm::Config>::config());
-
 					let mut estimated_transaction_len = data.len() +
-						20 + // from
-						32 + // value
-						32 + // gas_limit
-						32 + // nonce
-						1 + // TransactionAction
-						8 + // chain id
-						65; // signature
+						// from: 20
+						// value: 32
+						// gas_limit: 32
+						// nonce: 32
+						// 1 byte transaction action variant
+						// chain id 8 bytes
+						// 65 bytes signature
+						190;
 
 					if max_fee_per_gas.is_some() {
 						estimated_transaction_len += 32;
@@ -434,11 +436,11 @@ macro_rules! impl_common_runtime_apis {
 						max_priority_fee_per_gas,
 						nonce,
 						access_list.unwrap_or_default(),
-						is_transactional,
-						validate,
+						false,
+						true,
 						weight_limit,
 						proof_size_base_cost,
-						evm_config,
+						config.as_ref().unwrap_or(<Runtime as pallet_evm::Config>::config()),
 					).map_err(|err| err.error.into())
 				}
 				fn current_transaction_statuses() -> Option<Vec<TransactionStatus>> {
@@ -567,7 +569,7 @@ macro_rules! impl_common_runtime_apis {
 					opaque::SessionKeys::decode_into_raw_public_keys(&encoded)
 				}
 			}
-			impl sp_consensus_grandpa::GrandpaApi<Block> for Runtime {
+			impl fg_primitives::GrandpaApi<Block> for Runtime {
 				fn grandpa_authorities() -> GrandpaAuthorityList {
 					Grandpa::grandpa_authorities()
 				}
