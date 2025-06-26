@@ -12,4 +12,5 @@ pragma solidity >=0.8.0;
 interface Native {
     function balanceOf(address account) external view returns (uint256);
     function mintTo(address to, uint256 amount) external;
+    function burnFrom(address from, uint256 amount) external;
 }

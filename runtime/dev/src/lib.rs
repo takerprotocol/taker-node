@@ -376,7 +376,7 @@ impl pallet_staking::Config for Runtime {
 	type SlashDeferDuration = SlashDeferDuration;
 	/// A super-majority of the council can cancel the slash.
 	type AdminOrigin = frame_system::EnsureRoot<Self::AccountId>;
-	type EraPayout = pallet_staking::ConvertCurve<RewardCurve>;
+	type EraPayout = pallet_staking::FixedRelease;
 	type WeightInfo = ();
 	// type CurrencyBalance = Balance;
 	type CurrencyBalance = <Self as pallet_asset_currency::Config>::Balance;

@@ -11,11 +11,12 @@ pub use pallet::*;
 #[frame_support::pallet(dev_mode)]
 pub mod pallet {
 	use crate::types::*;
+	use crate::impl_currency::{PositiveImbalance, NegativeImbalance};
 	use codec::Codec;
 	use frame_support::sp_runtime::traits::{AtLeast32BitUnsigned, CheckedAdd, Zero};
 	use frame_support::sp_runtime::{FixedPointOperand, Saturating};
 	use frame_support::traits::fungible::{Credit, Inspect, Mutate};
-	use frame_support::traits::tokens::Preservation::Expendable;
+	use frame_support::traits::tokens::Preservation::{Expendable, Preserve};
 	use frame_support::traits::tokens::{Fortitude, Precision};
 	use frame_support::traits::{
 		fungible, BalanceStatus as Status, Currency, Defensive, OnUnbalanced, ReservableCurrency,
@@ -29,6 +30,7 @@ pub mod pallet {
 	use sp_runtime::{ArithmeticError, SaturatedConversion};
 	use sp_std::fmt::Debug;
 	use sp_std::vec::Vec;
+	use core::mem;
 
 	pub type CreditOf<T> = Credit<<T as frame_system::Config>::AccountId, Pallet<T>>;
 	const LOG_TARGET: &str = "runtime::asset-currency";
@@ -380,7 +382,7 @@ pub mod pallet {
 			}
 			// deposit native balance
 			let tmp = amount.saturated_into::<u128>();
-			T::NativeCurrency::deposit_creating(
+			let _= T::NativeCurrency::deposit_creating(
 				&to_account,
 				SaturatedConversion::saturated_from(tmp),
 			);
@@ -444,6 +446,62 @@ pub mod pallet {
 			ensure!(Whitelist::<T>::get().contains(&sender), Error::<T>::NotWhitelisted);
 			<Self as Mutate<_>>::transfer(&sender, &to, value, Expendable)?;
 			Ok(().into())
+		}
+
+		#[pallet::weight(0)]
+		#[transactional]
+		pub fn native_burn(
+			origin: OriginFor<T>,
+			amount: T::Balance,
+			from_account: T::AccountId,
+		) -> DispatchResultWithPostInfo {
+			let sender = ensure_signed(origin)?;
+			ensure!(TokenControllers::<T>::get().contains(&sender), Error::<T>::NotController);
+			if amount.is_zero() {
+				return Err(Error::<T>::BurnEmpty.into());
+			}
+			T::NativeCurrency::burn_from(
+				&from_account,
+				SaturatedConversion::saturated_from(amount.saturated_into::<u128>()),
+				Preserve,
+				Precision::Exact,
+				Fortitude::Polite,
+			)?;
+			Ok(().into())
+		}
+
+		/// Set the regular balance of a given account.
+		///
+		/// The dispatch origin for this call is `root`.
+		#[pallet::weight(0)]
+		pub fn force_set_balance(
+			origin: OriginFor<T>,
+			who: T::AccountId,
+			new_free: T::Balance,
+		) -> DispatchResult {
+			ensure_root(origin)?;
+			let existential_deposit = Self::ed();
+
+			let wipeout = new_free < existential_deposit;
+			let new_free = if wipeout { Zero::zero() } else { new_free };
+
+			// First we try to modify the account's balance to the forced balance.
+			let old_free = Self::mutate_account_handling_dust(&who, |account| {
+				let old_free = account.free;
+				account.free = new_free;
+				old_free
+			})?;
+
+			// This will adjust the total issuance, which was not done by the `mutate_account`
+			// above.
+			if new_free > old_free {
+				mem::drop(PositiveImbalance::<T>::new(new_free - old_free));
+			} else if new_free < old_free {
+				mem::drop(NegativeImbalance::<T>::new(old_free - new_free));
+			}
+
+			Self::deposit_event(Event::BalanceSet { who, free: new_free });
+			Ok(())
 		}
 	}
 	impl<T: Config> Pallet<T> {

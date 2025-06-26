@@ -159,7 +159,11 @@ impl<T: Config> Pallet<T> {
 				era_index: era,
 				validator_stash: stash.clone(),
 			});
-			let payout_amount = payout_info.1;
+			let mut payout_amount = payout_info.1;
+			const RELEASE_LIMIT: u128 = 1_000_000_000 * 1_000_000_000_000_000_000;
+			let issuance = T::Currency::total_issuance();
+			let unreleased: BalanceOf<T> = RELEASE_LIMIT.saturated_into::<BalanceOf<T>>().saturating_sub(issuance);
+			payout_amount = unreleased.min(payout_amount);
 			let mut total_imbalance = PositiveImbalanceOf::<T>::zero();
 			// We can now make total validator payout:
 			if let Some(imbalance) = Self::make_payout(&stash, payout_amount) {
@@ -375,7 +379,7 @@ impl<T: Config> Pallet<T> {
 
 			let era_duration = (now_as_millis_u64 - active_era_start).saturated_into::<u64>();
 			let staked = Self::eras_total_stake(&active_era.index);
-			let issuance = T::Currency::total_issuance() + T::GasCurrency::total_issuance();
+			let issuance = T::Currency::total_issuance();
 			let (validator_payout, remainder) =
 				T::EraPayout::era_payout(staked, issuance, era_duration);
 

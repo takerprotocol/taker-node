@@ -49,4 +49,16 @@ where
 		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;
 		Ok(())
 	}
+
+	#[precompile::public("burnFrom(address,uint256)")]
+	#[precompile::public("burn_from(address,uint256)")]
+	fn burn_from(handle: &mut impl PrecompileHandle, from: Address, value: u128) -> EvmResult {
+		let origin = Runtime::AddressMapping::into_account_id(handle.context().caller);
+		let amount: <Runtime as pallet_asset_currency::Config>::Balance =
+			SaturatedConversion::saturated_from(value);
+		let from_account = Runtime::AddressMapping::into_account_id(from.0);
+		let call = pallet_asset_currency::Call::<Runtime>::native_burn { amount, from_account };
+		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;
+		Ok(())
+	}
 }

@@ -1,6 +1,6 @@
 [package]
 name = "taker"
-version = "0.2.1"
+version = "0.2.3"
 authors = { workspace = true }
 homepage = { workspace = true }
 edition = { workspace = true }
@@ -47,6 +47,11 @@ taker-common-node = { workspace = true }
 taker-dev-node = { workspace = true }
 taker-testnet-node = { workspace = true }
 taker-mainnet-node = { workspace = true }
+
+
+[target.'cfg(not(target_env = "msvc"))'.dependencies]
+tikv-jemallocator.workspace = true
+
 
 [build-dependencies]
 substrate-build-script-utils = { workspace = true }

@@ -849,6 +849,28 @@ impl<Balance: AtLeast32BitUnsigned + Clone, T: Get<&'static PiecewiseLinear<'sta
 	}
 }
 
+/// 20_000_000 VeTAKER releases per year.
+/// Release limit is 1 billion
+pub struct FixedRelease;
+impl<Balance: AtLeast32BitUnsigned + From<u128>> EraPayout<Balance> for FixedRelease
+{
+	fn era_payout(
+		_total_staked: Balance,
+		total_issuance: Balance,
+		era_duration_millis: u64,
+	) -> (Balance, Balance) {
+		const MILLISECONDS_PER_YEAR: u64 = 1000 * 3600 * 24 * 365;
+		const REWARD_PER_YEAR: u128 = 20_000_000 * 1_000_000_000_000_000_000;
+		const RELEASE_LIMIT: u128 = 1_000_000_000 * 1_000_000_000_000_000_000;
+
+		let portion = Perbill::from_rational(era_duration_millis as u64, MILLISECONDS_PER_YEAR);
+		let validator_payout = portion * REWARD_PER_YEAR;
+
+		let unreleased: Balance = <u128 as Into<Balance>>::into(RELEASE_LIMIT).saturating_sub(total_issuance);
+		(<u128 as Into<Balance>>::into(validator_payout).min(unreleased), 0u128.into())
+	}
+}
+
 /// Mode of era-forcing.
 #[derive(
 	Copy,
