@@ -15,6 +15,10 @@ pub mod currency {
 
 	pub const TRANSACTION_BYTE_FEE: Balance = GWEI / 3_000;
 	pub const STORAGE_BYTE_FEE: Balance = 1 * SUPPLY_FACTOR * MILLISBTC;
+
+	pub const fn deposit(items: u32, bytes: u32) -> Balance {
+		items as Balance * 15 * MILLISBTC + (bytes as Balance) * 6 * MILLISBTC
+	}
 }
 
 pub mod time {

@@ -380,9 +380,17 @@ impl<T: Config> Pallet<T> {
 			let era_duration = (now_as_millis_u64 - active_era_start).saturated_into::<u64>();
 			let staked = Self::eras_total_stake(&active_era.index);
 			let issuance = T::Currency::total_issuance();
-			let (validator_payout, remainder) =
+			let (mut validator_payout, remainder) =
 				T::EraPayout::era_payout(staked, issuance, era_duration);
 
+			let mut converted_payout: u128 = validator_payout.saturated_into();
+			let ratio = Self::rewards_ratio();
+            if ratio.1 != 0 {
+                converted_payout = converted_payout.saturating_mul(ratio.0).saturating_div(ratio.1);
+            } else {
+				converted_payout = 0;
+			}
+			validator_payout = converted_payout.saturated_into::<BalanceOf<T>>();
 			Self::deposit_event(Event::<T>::EraPayout(
 				active_era.index,
 				validator_payout,

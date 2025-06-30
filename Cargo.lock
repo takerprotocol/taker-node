@@ -5999,6 +5999,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-multisig"
+version = "37.0.0"
+source = "git+https://github.com/boolnetwork/polkadot-sdk?branch=taker-polkadot-stable2407#e28d0a132867bbc90ff3852094109a8f336aa5bf"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "log",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-io",
+ "sp-runtime",
+]
+
+[[package]]
 name = "pallet-offences"
 version = "36.0.0"
 source = "git+https://github.com/boolnetwork/polkadot-sdk?branch=taker-polkadot-stable2407#e28d0a132867bbc90ff3852094109a8f336aa5bf"
@@ -6202,7 +6216,7 @@ checksum = "4e69bf016dc406eff7d53a7d3f7cf1c2e72c82b9088aac1118591e36dd2cd3e9"
 dependencies = [
  "bitcoin_hashes",
  "rand",
- "rand_core 0.6.4",
+ "rand_core 0.5.1",
  "serde",
  "unicode-normalization",
 ]
@@ -10334,7 +10348,7 @@ dependencies = [
 
 [[package]]
 name = "taker"
-version = "0.2.3"
+version = "0.2.4"
 dependencies = [
  "clap",
  "frame-benchmarking",
@@ -10537,6 +10551,7 @@ dependencies = [
  "pallet-evm-precompile-simple",
  "pallet-grandpa",
  "pallet-im-online",
+ "pallet-multisig",
  "pallet-offences",
  "pallet-session",
  "pallet-staking",
@@ -10686,6 +10701,7 @@ dependencies = [
  "pallet-evm-precompile-simple",
  "pallet-grandpa",
  "pallet-im-online",
+ "pallet-multisig",
  "pallet-offences",
  "pallet-session",
  "pallet-staking",
@@ -10835,6 +10851,7 @@ dependencies = [
  "pallet-evm-precompile-simple",
  "pallet-grandpa",
  "pallet-im-online",
+ "pallet-multisig",
  "pallet-offences",
  "pallet-session",
  "pallet-staking",

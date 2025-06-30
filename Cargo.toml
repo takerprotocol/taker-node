@@ -155,6 +155,7 @@ pallet-im-online = { default-features = false, git = "https://github.com/boolnet
 pallet-offences = { default-features = false, git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker-polkadot-stable2407" }
 pallet-authorship = { default-features = false, git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker-polkadot-stable2407" }
 pallet-utility = { default-features = false, git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker-polkadot-stable2407" }
+pallet-multisig = { default-features = false, git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker-polkadot-stable2407" }
 
 # Substrate Builds
 substrate-wasm-builder = { git = "https://github.com/boolnetwork/polkadot-sdk", branch = "taker-polkadot-stable2407" }

@@ -49,6 +49,7 @@ pallet-authorship = { workspace = true }
 pallet-asset-currency = { workspace = true }
 pallet-utility = { workspace = true }
 pallet-staking-runtime-api.workspace = true
+pallet-multisig = { workspace = true }
 
 # substrate primitives
 sp-api = { workspace = true }

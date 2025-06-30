@@ -597,6 +597,11 @@ pub mod pallet {
 		ValueQuery,
 	>;
 
+	/// The reward release coefficient is used to control the number of rewards issued. If v.1 is 0, there is no reward.
+	#[pallet::storage]
+	#[pallet::getter(fn rewards_ratio)]
+	pub type RewardsRatio<T: Config> = StorageValue<_, (u128, u128), ValueQuery>;
+
 	#[pallet::genesis_config]
 	#[derive(frame_support::DefaultNoBound)]
 	pub struct GenesisConfig<T: Config> {
@@ -1797,6 +1802,18 @@ pub mod pallet {
 			MinimumValidatorCount::<T>::put(count);
 			Ok(())
 		}
+
+		#[pallet::call_index(27)]
+		#[pallet::weight(0)]
+        pub fn set_rewards_ratio(
+            origin: OriginFor<T>,
+            new_ratio: (u128, u128),
+        ) -> DispatchResultWithPostInfo {
+            ensure_root(origin)?;
+            // update storage
+            <RewardsRatio<T>>::put(new_ratio);
+            Ok(().into())
+        }
 	}
 }
 

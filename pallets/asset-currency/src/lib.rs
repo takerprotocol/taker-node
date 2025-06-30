@@ -309,6 +309,7 @@ pub mod pallet {
 		NotWhitelisted,
 		BurnOverflow,
 		MintEmpty,
+		ExceedTotalLimit,
 	}
 
 	#[pallet::hooks]
@@ -480,6 +481,14 @@ pub mod pallet {
 			new_free: T::Balance,
 		) -> DispatchResult {
 			ensure_root(origin)?;
+
+			const RELEASE_LIMIT: u128 = 1_000_000_000 * 1_000_000_000_000_000_000;
+			let cur_balance = Account::<T>::get(&who);
+			let cur_total = TotalIssuance::<T>::get();
+			if RELEASE_LIMIT < cur_total.saturating_add(new_free.saturating_sub(cur_balance.free)).saturated_into::<u128>() {
+				return Err(Error::<T>::ExceedTotalLimit.into());
+			}
+
 			let existential_deposit = Self::ed();
 
 			let wipeout = new_free < existential_deposit;
