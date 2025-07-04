@@ -8,6 +8,8 @@ use sp_runtime::traits::Dispatchable;
 use sp_runtime::SaturatedConversion;
 use sp_std::marker::PhantomData;
 
+type BalanceOf<Runtime> = <Runtime as pallet_asset_currency::Config>::Balance;
+
 pub struct NativeCurrencyPrecompile<Runtime>(PhantomData<Runtime>);
 
 #[precompile_utils::precompile]
@@ -21,6 +23,7 @@ where
 	Runtime::RuntimeCall: From<pallet_asset_currency::Call<Runtime>>,
 	<Runtime::RuntimeCall as Dispatchable>::RuntimeOrigin: From<Option<Runtime::AccountId>>,
 	<Runtime as pallet_balances::Config>::Balance: Into<U256>,
+	BalanceOf<Runtime>: TryFrom<U256>,
 	Runtime::AccountId: Into<H160>,
 {
 	// Storage getters
@@ -40,10 +43,9 @@ where
 
 	#[precompile::public("mintTo(address,uint256)")]
 	#[precompile::public("mint_to(address,uint256)")]
-	fn mint_to(handle: &mut impl PrecompileHandle, to: Address, value: u128) -> EvmResult {
+	fn mint_to(handle: &mut impl PrecompileHandle, to: Address, value: U256) -> EvmResult {
 		let origin = Runtime::AddressMapping::into_account_id(handle.context().caller);
-		let amount: <Runtime as pallet_asset_currency::Config>::Balance =
-			SaturatedConversion::saturated_from(value);
+		let amount = Self::u256_to_amount(value).in_field("value")?;
 		let to_account = Runtime::AddressMapping::into_account_id(to.0);
 		let call = pallet_asset_currency::Call::<Runtime>::native_mint_to { amount, to_account };
 		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;
@@ -52,13 +54,18 @@ where
 
 	#[precompile::public("burnFrom(address,uint256)")]
 	#[precompile::public("burn_from(address,uint256)")]
-	fn burn_from(handle: &mut impl PrecompileHandle, from: Address, value: u128) -> EvmResult {
+	fn burn_from(handle: &mut impl PrecompileHandle, from: Address, value: U256) -> EvmResult {
 		let origin = Runtime::AddressMapping::into_account_id(handle.context().caller);
-		let amount: <Runtime as pallet_asset_currency::Config>::Balance =
-			SaturatedConversion::saturated_from(value);
+		let amount = Self::u256_to_amount(value).in_field("value")?;
 		let from_account = Runtime::AddressMapping::into_account_id(from.0);
 		let call = pallet_asset_currency::Call::<Runtime>::native_burn { amount, from_account };
 		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;
 		Ok(())
+	}
+
+	fn u256_to_amount(value: U256) -> MayRevert<BalanceOf<Runtime>> {
+		value
+			.try_into()
+			.map_err(|_| RevertReason::value_is_too_large("balance type").into())
 	}
 }

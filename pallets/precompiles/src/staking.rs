@@ -291,12 +291,12 @@ where
 	#[precompile::public("bond_and_nominate(uint256,uint256,address[])")]
 	fn bond_and_nominate(
 		handle: &mut impl PrecompileHandle,
-		bond_value: u128,
+		bond_value: U256,
 		payee: u8,
 		accounts: Vec<Address>,
 	) -> EvmResult {
 		let origin = Runtime::AddressMapping::into_account_id(handle.context().caller);
-		let value: BalanceOf<Runtime> = SaturatedConversion::saturated_from(bond_value);
+		let value: BalanceOf<Runtime> = Self::u256_to_amount(bond_value).in_field("bond_value")?;
 
 		let payee = match payee {
 			0 => RewardDestination::Staked,
@@ -320,7 +320,7 @@ where
 	#[precompile::public("bond_and_validate(uint256,uint256,uint256,bool,bytes,bytes)")]
 	fn bond_and_validate(
 		handle: &mut impl PrecompileHandle,
-		bond_value: u128,
+		bond_value: U256,
 		payee: u8,
 		commission: u32,
 		can_nominated: bool,
@@ -328,7 +328,7 @@ where
 		proof: UnboundedBytes,
 	) -> EvmResult {
 		let origin = Runtime::AddressMapping::into_account_id(handle.context().caller);
-		let value: BalanceOf<Runtime> = SaturatedConversion::saturated_from(bond_value);
+		let value: BalanceOf<Runtime> = Self::u256_to_amount(bond_value).in_field("bond_value")?;
 		let payee = match payee {
 			0 => RewardDestination::Staked,
 			1 => RewardDestination::Stash,
@@ -362,18 +362,18 @@ where
 
 	#[precompile::public("bondExtra(uint256)")]
 	#[precompile::public("bond_extra(uint256)")]
-	fn bond_extra(handle: &mut impl PrecompileHandle, value: u128) -> EvmResult {
+	fn bond_extra(handle: &mut impl PrecompileHandle, value: U256) -> EvmResult {
 		let origin = Runtime::AddressMapping::into_account_id(handle.context().caller);
-		let max_additional: BalanceOf<Runtime> = SaturatedConversion::saturated_from(value);
+		let max_additional: BalanceOf<Runtime> = Self::u256_to_amount(value).in_field("value")?;
 		let call = pallet_staking::Call::<Runtime>::bond_extra { max_additional };
 		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;
 		Ok(())
 	}
 
 	#[precompile::public("unbond(uint256)")]
-	fn unbond(handle: &mut impl PrecompileHandle, bond_value: u128) -> EvmResult {
+	fn unbond(handle: &mut impl PrecompileHandle, bond_value: U256) -> EvmResult {
 		let origin = Runtime::AddressMapping::into_account_id(handle.context().caller);
-		let value: BalanceOf<Runtime> = SaturatedConversion::saturated_from(bond_value);
+		let value: BalanceOf<Runtime> = Self::u256_to_amount(bond_value).in_field("bond_value")?;
 		let call = pallet_staking::Call::<Runtime>::unbond { value };
 		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;
 		Ok(())
@@ -496,10 +496,10 @@ where
 
 	#[precompile::public("chillAndUnbonded(uint256)")]
 	#[precompile::public("chill_and_unbonded(uint256)")]
-	fn chill_and_unbonded(handle: &mut impl PrecompileHandle, unbond_value: u128) -> EvmResult {
+	fn chill_and_unbonded(handle: &mut impl PrecompileHandle, unbond_value: U256) -> EvmResult {
 		let origin = Runtime::AddressMapping::into_account_id(handle.context().caller);
 		let chill_call = pallet_staking::Call::<Runtime>::chill {}.into();
-		let value: BalanceOf<Runtime> = SaturatedConversion::saturated_from(unbond_value);
+		let value: BalanceOf<Runtime> = Self::u256_to_amount(unbond_value).in_field("unbond_value")?;
 		let unbond_call = pallet_staking::Call::<Runtime>::unbond { value }.into();
 		let calls = vec![chill_call, unbond_call];
 		let call = pallet_utility::Call::<Runtime>::batch_all { calls };
@@ -511,11 +511,11 @@ where
 	#[precompile::public("bond_extra_and_nominate(uint256,address[])")]
 	fn bond_extra_and_nominate(
 		handle: &mut impl PrecompileHandle,
-		bond_value: u128,
+		bond_value: U256,
 		accounts: Vec<Address>,
 	) -> EvmResult {
 		let origin = Runtime::AddressMapping::into_account_id(handle.context().caller);
-		let max_additional: BalanceOf<Runtime> = SaturatedConversion::saturated_from(bond_value);
+		let max_additional: BalanceOf<Runtime> = Self::u256_to_amount(bond_value).in_field("bond_value")?;
 		let bond_extra_call = pallet_staking::Call::<Runtime>::bond_extra { max_additional }.into();
 		let targets = accounts
 			.iter()
@@ -532,14 +532,14 @@ where
 	#[precompile::public("bond_extra_and_validate(uint256,uint256,bool,bytes,bytes)")]
 	fn bond_extra_and_validate(
 		handle: &mut impl PrecompileHandle,
-		bond_value: u128,
+		bond_value: U256,
 		commission: u32,
 		can_nominated: bool,
 		raw_keys: UnboundedBytes,
 		proof: UnboundedBytes,
 	) -> EvmResult {
 		let origin = Runtime::AddressMapping::into_account_id(handle.context().caller);
-		let max_additional: BalanceOf<Runtime> = SaturatedConversion::saturated_from(bond_value);
+		let max_additional: BalanceOf<Runtime> = Self::u256_to_amount(bond_value).in_field("bond_value")?;
 		let commission = sp_runtime::Perbill::from_percent(commission);
 		let keys = Runtime::Keys::decode(&mut raw_keys.as_bytes())
 			.map_err(|_| ExitError::Other("Incorrect session keys".into()))?;
@@ -554,5 +554,11 @@ where
 		let call = pallet_utility::Call::<Runtime>::batch_all { calls };
 		RuntimeHelper::<Runtime>::try_dispatch(handle, Some(origin).into(), call)?;
 		Ok(())
+	}
+
+	fn u256_to_amount(value: U256) -> MayRevert<BalanceOf<Runtime>> {
+		value
+			.try_into()
+			.map_err(|_| RevertReason::value_is_too_large("balance type").into())
 	}
 }

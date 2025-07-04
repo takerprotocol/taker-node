@@ -386,7 +386,9 @@ impl<T: Config> Pallet<T> {
 			let mut converted_payout: u128 = validator_payout.saturated_into();
 			let ratio = Self::rewards_ratio();
             if ratio.1 != 0 {
+				const RELEASE_LIMIT: u128 = 1_000_000_000 * 1_000_000_000_000_000_000;
                 converted_payout = converted_payout.saturating_mul(ratio.0).saturating_div(ratio.1);
+				converted_payout = converted_payout.min(RELEASE_LIMIT.saturating_sub(issuance.saturated_into()));
             } else {
 				converted_payout = 0;
 			}
