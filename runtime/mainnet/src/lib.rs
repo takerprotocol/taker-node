@@ -143,7 +143,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	// The version of the authorship interface.
 	authoring_version: 1,
 	// The version of the runtime spec.
-	spec_version: 108,
+	spec_version: 109,
 	// The version of the implementation of the spec.
 	impl_version: 1,
 	// A list of supported runtime APIs along with their versions.
@@ -318,11 +318,11 @@ pallet_staking_reward_curve::build! {
 }
 
 parameter_types! {
-	pub const SessionsPerEra: sp_staking::SessionIndex = 3;
+	pub const SessionsPerEra: sp_staking::SessionIndex = 48;
 	pub const BondingDuration: sp_staking::EraIndex = 1;
 	pub const SlashDeferDuration: sp_staking::EraIndex = 2;
 	pub const RewardCurve: &'static sp_runtime::curve::PiecewiseLinear<'static> = &REWARD_CURVE;
-	pub HistoryDepth: u32 = 84;
+	pub HistoryDepth: u32 = 168;
 	pub const MaxNominatorRewardedPerValidator: u32 = 256;
 	/// Maximum number of nominations per nominator.
 	pub const MaxNominations: u32 = 16;
